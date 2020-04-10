@@ -24,12 +24,9 @@ class IssueHistory:
     history that it has existed there before at least at one point in time.
 
     if we can find it, then we can iterate through all the various issue keys.
-    so for now, we store all our issue key to d["key"] which we can call later
-    from the IssueHistory Class.method dkeys
+    so for now, we store all our issue key to d which we unpack as d["key"]
+    then we can call it later since we passed it as position parameter or kwargs
     """
-    def __init__(self, **kwargs):
-        pass
-
     @staticmethod
     def filter_issue_keys(data):
         global fjson
@@ -63,17 +60,18 @@ class IssueHistory:
                             if j["field"] == field_name:
                                 # print("Found Field: {}, From: {}, Changed To: {} "
                                 #     .format(j["field"], j["fromString"], j["toString"]))
-                                self.rebuild_field_options((j["field"], j["fieldId"], j["fromString"], j["toString"]),
-                                                           d)
+                                self.rebuild_field_options((j["field"], j["fieldId"],
+                                                            j["fromString"], j["toString"]), d, field_name=field_name)
                             else:
                                 print(f"Unable to find {field_name}")
 
-    def rebuild_field_options(self, j, d):
+    def rebuild_field_options(self, j, d, field_name=None):
         """
+        :param field_name: contains the name of our custom field
         :param j: stores the value of our fromString and toString we'll need this later
         :param d: stores our issue key, so we can always call this later
-        :return: get the options that is not "None" -> not used as we can't iterate
-        through a NoneType
+        :return: get the options that is not "None", we can post this as a String.
+        Below we ensure we extract our cf id and the values in j.
         """
         s = j[1]
         seq3 = s.strip("customfield_")
@@ -95,32 +93,36 @@ class IssueHistory:
         #                 output.close()
         if 'None' in str(j[2]) not in str(j[3]) or 'None' in str(j[3]) not in str(j[2]):
             print(str(j[3]) or str(j[2]))
-            self.sort_options(j, seq3, d)
+            print(j[1])
+            self.sort_options(j, seq3, d, field_name=field_name)
 
     # we store all the values of j where it's not duplicated
-    def sort_options(self, j, seq3, d):
+    def sort_options(self, j, seq3, d, field_name=None):
         try:
-            #if field_type == field_name:
-            return self.create_back_cf_options(j, seq3, d)
+            # if field_type == field_name:
+            self.create_back_cf_options(j, seq3, d=d, field_name=field_name)
             # else:
-                # {"errorMessages":["Field customfield_10034 of type Text Field (single line) does not support
-                #  options."],"errors":{}}
-                # run = Field()
-                # run.rebuild_issue_custom_field_value(value, c, field_name=None, d=d)
+            # {"errorMessages":["Field customfield_10034 of type Text Field (single line) does not support
+            #  options."],"errors":{}}
+            # run = Field()
+            # run.rebuild_issue_custom_field_value(value, c, field_name=None, d=d)
         except ValueError:
             print("Something went wrong: {}".format(sys.exc_info()[1]))
 
     # below method is to create back the options for the custom-field, since we can identify it
     @staticmethod
-    def create_back_cf_options(j, seq3, d=None):
+    def create_back_cf_options(j, seq3, d=None, field_name=None):
         print("*" * 90)
         webURL = ("https://{}/rest/api/3/customField/{}/option".format(baseurl, seq3))
         payload = (
             {
-                "value": j[3],
-                "cascadingOptions": [
-                    j[3]
+                "options": [
+                    {
+                        "cascadingOptions": [],
+                        "value": j[3]
+                    }
                 ]
+
             }
         )
         data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
@@ -128,8 +130,8 @@ class IssueHistory:
             print("Error: Unable to Post the Data to the Issue...", data.status_code, sep="*")
         else:
             print("Creating {} field option for {}".format(j[3], j[0]))
-            # run = Field()
-            # run.rebuild_issue_custom_field_value(value, c, field_name=None, d=d)
+            run = Field()
+            run.rebuild_issue_custom_field_value(j, c=None, field_name=field_name, d=d)
 
 
 class Field(IssueHistory):
@@ -139,9 +141,6 @@ class Field(IssueHistory):
     if the field has context, we should search for that instead and see
     if our options exist therein. if it doesn't then we build it back
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_field(self, field_name):
         webURL = ("https://" + baseurl + "/rest/api/3/field")
         data = requests.get(webURL, auth=auth_request, headers=headers)
@@ -168,25 +167,25 @@ class Field(IssueHistory):
     def get_field_value(self, fjson, c, field_name):
         for a in fjson["values"]:
             if a["value"] is not None:
-                value = a["value"]
-                print(value)
-                self.post_field_data(value, c, field_name)
+                j = a["value"]
+                print(j)
+                self.post_field_data(j, c, field_name)
 
-    def post_field_data(self, value, c, field_name, d=None):
+    def post_field_data(self, j, c, field_name, d=None):
         # TODO: to find the type of field_type used use this endpoint
         # https://atlas-connect.atlassian.net/rest/api/3/field/search?type=custom
         # values accepted "custom" or "system"
-        return self.rebuild_issue_custom_field_value(value, c, field_name=field_name, d=d)
+        return self.rebuild_issue_custom_field_value(j, c=None, field_name=field_name, d=d)
 
     @staticmethod
-    def rebuild_issue_custom_field_value(value, c, field_name=None, d=None):
+    def rebuild_issue_custom_field_value(j, c=None, field_name=None, d=None):
         webURL = ("https://{}/rest/api/3/issue/{}".format(baseurl, d["key"]))
         payload = (
             {
-                "fields": {
+                "update": {
                     field_name:
                         {
-                            "set": value
+                            "set": j[3]
                         }
 
                 }
@@ -194,14 +193,15 @@ class Field(IssueHistory):
         )
         response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
         if response.status_code != 204:
-            print('Error: Unable to Post the Data to the Issue...\n', response.status_code, sep="*")
+            print("Error: Unable to Post the Data to the Issue...\n", response.status_code, sep="*")
             print("*" * 90)
         else:
-            print("")
+            print("Custom field Option Added to {}".format(d["key"]))
             print("*" * 90)
 
     # bulk create custom fields
-    def create_cf(self, field_name):
+    @staticmethod
+    def create_cf(field_name):
         field_type = []
         field_type_selected = ['com.atlassian.jira.plugin.system.customfieldtypes:cascadingselect, '
                                'com.atlassian.jira.plugin.system.customfieldtypes:datepicker, '
@@ -239,11 +239,11 @@ class Field(IssueHistory):
                                      'com.atlassian.jira.plugin.system.customfieldtypes:userpickergroupsearcher, '
                                      'com.atlassian.jira.plugin.system.customfieldtypes:versionsearcher']
 
-        print("These are the accepted values of field type \n {}".format(field_type))
+        print("These are the accepted values of field type \n {}".format(field_type_selected))
         select_fk = input("Enter the field type:  \n")
         if select_fk in field_type_selected:
             field_type.append(select_fk)
-        print("These are the accepted values of Search key \n {}".format(field_search_key))
+        print("These are the accepted values of Search key \n {}".format(field_search_key_selected))
         select_sk = input("Enter the Search type: \n")
         if select_sk in field_search_key_selected:
             field_search_key.append(select_sk)
@@ -262,36 +262,15 @@ class Field(IssueHistory):
             print("*" * 90)
         else:
             print("Custom field {} created...".format(field_name))
-            self.sub_filter(v=field_name)
             print("*" * 90)
 
 
-# main function call
-def main():
-    jira_basic_auth()
-
-
 # running get request for authentication and request
-def make_session(email=None, token=None, baseurl=None):
+def make_session(email=None, token=None):
     global auth_request
     global headers
     auth_request = HTTPBasicAuth(email, token)
     headers = {"Content-Type": "application/json"}
-
-
-# authenticate user
-def login(baseurl, email, token):
-    if email and token is not None:
-        make_session(email, token, baseurl)
-        webURL = ("https://" + baseurl + "/rest/api/3/search?jql=project%20%3D%20T6")
-        data = requests.get(webURL, auth=auth_request, headers=headers)
-        if data.status_code == 200:
-            print("Login Successful...\n")
-            run = IssueHistory()
-            run.filter_issue_keys(data)
-        else:
-            sys.stderr.write("Authentication Failed...\n")
-            sys.exit(1)
 
 
 # Basic Auth Using python completed within <STDIN>
@@ -308,6 +287,21 @@ def jira_basic_auth():
     login(baseurl, email, token)
 
 
+# authenticate user
+def login(baseurl, email, token):
+    if email and token is not None:
+        make_session(email, token)
+        webURL = ("https://" + baseurl + "/rest/api/3/search?jql=project%20%3D%20T6")
+        data = requests.get(webURL, auth=auth_request, headers=headers)
+        if data.status_code == 200:
+            print("Login Successful...\n")
+            run = IssueHistory()
+            run.filter_issue_keys(data)
+        else:
+            sys.stderr.write("Authentication Failed...\n")
+            sys.exit(1)
+
+
 # simply validate login details
 def validate(email=None, token=None, baseurl=None):
     # p1 = re.compile('[A-Za-z0-9._%+-+@[A-Za-z0-9.-]+.\[A-Za-z]{3,4}')
@@ -317,8 +311,3 @@ def validate(email=None, token=None, baseurl=None):
         print("Your token can't be empty")
     elif baseurl == "":
         print("Your Instance Name can't be empty...")
-
-
-# Main Program Initialization here
-if __name__ == "__main__":
-    main()
