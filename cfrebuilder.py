@@ -22,27 +22,31 @@ class IssueHistory:
     """
     In order to get the custom-field, we need to know in the changelog
     history that it has existed there before at least at one point in time.
-
     if we can find it, then we can iterate through all the various issue keys.
     so for now, we store all our issue key to d which we unpack as d["key"]
     then we can call it later since we passed it as position parameter or kwargs
     """
-    @staticmethod
-    def filter_issue_keys(data):
+
+    def filter_issue_keys(self, data):
         global fjson
         fjson = json.loads(data.content)
         print("Filtering Issue Keys, {} Issues returned...".format(str(fjson["total"])))
         field_name = input("Enter the Name of the Custom Field: \n")
         if field_name is not None:
-            check = Field()
-            check.get_field(field_name)
+            self.sub_filter(v=field_name)
 
     def sub_filter(self, v):
-        if list(fjson["issues"]) is not None:
-            for d in list(fjson["issues"]):
-                field_name = v
-                print("Reading Issues: {} ".format(d["key"]))
-                self.get_field_issue_history(d, field_name)
+        field_name = v
+        check = Field()
+        if check.get_field(field_name) == field_name:
+            check.get_field_option(field_name=field_name, g=check.get_field_type(field_name=field_name))
+        else:
+            context = input(f"A Context doesn't exist on {field_name}, we'll build it now, please add a context "
+                            f"then press 'Enter' \n")
+            if list(fjson["issues"]) is not None:
+                for d in list(fjson["issues"]):
+                    print("Reading Issues: {} ".format(d["key"]))
+                    self.get_field_issue_history(d, field_name)
 
     def get_field_issue_history(self, d, field_name):
         print("Matching, Issue key " + d["key"] + " to URL...")
@@ -58,60 +62,36 @@ class IssueHistory:
                     if fetch is not None:
                         for j in fetch:
                             if j["field"] == field_name:
-                                # print("Found Field: {}, From: {}, Changed To: {} "
-                                #     .format(j["field"], j["fromString"], j["toString"]))
                                 self.rebuild_field_options((j["field"], j["fieldId"],
-                                                            j["fromString"], j["toString"]), d, field_name=field_name)
+                                                            j["fromString"], j["toString"]), d=d, field_name=field_name)
                             else:
                                 print(f"Unable to find {field_name}")
 
-    def rebuild_field_options(self, j, d, field_name=None):
+    def rebuild_field_options(self, j=None, d=None, field_name=None):
         """
         :param field_name: contains the name of our custom field
         :param j: stores the value of our fromString and toString we'll need this later
+        but we only want the toString which is j[3]
         :param d: stores our issue key, so we can always call this later
-        :return: get the options that is not "None", we can post this as a String.
         Below we ensure we extract our cf id and the values in j.
         """
         s = j[1]
         seq3 = s.strip("customfield_")
-        # seq = []
-        #
-        #         for k in str(j[3]):
-        #             seq.append(k)
-        #             if seq.sort():
-        #                 output = open('output.txt', 'a+')
-        #                 output.write(k)
-        #                 output.close()
-        #         for v in str(j[2]):
-        #             seq.append(v)
-        #             if v == str('None'):
-        #                 pass
-        #             else:
-        #                 output = open('output.txt', 'a+')
-        #                 output.write(v)
-        #                 output.close()
-        if 'None' in str(j[2]) not in str(j[3]) or 'None' in str(j[3]) not in str(j[2]):
-            print(str(j[3]) or str(j[2]))
-            print(j[1])
-            self.sort_options(j, seq3, d, field_name=field_name)
+        if str(j[3]):
+            print(str(j[3]))
+            self.sort_options(j=j, seq3=seq3, d=d, field_name=field_name)
 
     # we store all the values of j where it's not duplicated
-    def sort_options(self, j, seq3, d, field_name=None):
+    def sort_options(self, j=None, seq3=None, d=None, field_name=None):
         try:
             # if field_type == field_name:
-            self.create_back_cf_options(j, seq3, d=d, field_name=field_name)
-            # else:
-            # {"errorMessages":["Field customfield_10034 of type Text Field (single line) does not support
-            #  options."],"errors":{}}
-            # run = Field()
-            # run.rebuild_issue_custom_field_value(value, c, field_name=None, d=d)
+            self.create_back_cf_options(j=j, seq3=seq3, d=d, field_name=field_name)
         except ValueError:
             print("Something went wrong: {}".format(sys.exc_info()[1]))
 
     # below method is to create back the options for the custom-field, since we can identify it
     @staticmethod
-    def create_back_cf_options(j, seq3, d=None, field_name=None):
+    def create_back_cf_options(j=None, seq3=None, d=None, field_name=None):
         print("*" * 90)
         webURL = ("https://{}/rest/api/3/customField/{}/option".format(baseurl, seq3))
         payload = (
@@ -131,54 +111,74 @@ class IssueHistory:
         else:
             print("Creating {} field option for {}".format(j[3], j[0]))
             run = Field()
-            run.rebuild_issue_custom_field_value(j, c=None, field_name=field_name, d=d)
+            run.rebuild_issue_custom_field_value(j=j, field_name=field_name, d=d)
 
 
 class Field(IssueHistory):
     """
-    `get_field`:
+    `get_field` and `get_field_type`
     check if the field exist by looking at the endpoint /rest/api/3/field
-    if the field has context, we should search for that instead and see
+    if the field has context it should exist, we should search for that instead and see
     if our options exist therein. if it doesn't then we build it back
     """
-    def get_field(self, field_name):
+    @staticmethod
+    def get_field(field_name):
         webURL = ("https://" + baseurl + "/rest/api/3/field")
         data = requests.get(webURL, auth=auth_request, headers=headers)
         fjson = json.loads(data.content)
         for c in list(fjson):
             if field_name == c["name"]:
-                print("Finding Custom field...")
-                print("Found: {}, CustomId: {}".format(c["name"], c["schema"]["customId"]))
-                # if options are present do below
-                self.get_field_option(c["schema"]["customId"], field_name)
-            # elif field_name not in c["name"]:
-            # self.create_cf(field_name)
-            else:
-                # in the event the option doesn't exist do below
-                self.sub_filter(v=field_name)
+                return c["name"]
+
+    @staticmethod
+    def get_field_type(field_name=None):
+        webURL = ("https://{}/rest/api/3/field/search?type=custom"
+                  .format(baseurl))
+        data = requests.get(webURL, auth=auth_request, headers=headers)
+        pjson = json.loads(data.content)
+        for a in pjson["values"]:
+            if a["name"] == field_name:
+                return a["schema"]["custom"]
 
     # wrapping the field options in order to post to issue
-    def get_field_option(self, c, field_name):
-        webURL = ("https://" + baseurl + "/rest/api/3/customField/" + str(c["schema"]["customId"]) + "/context")
+    def get_field_option(self, g=None, field_name=None):
+        webURL = ("https://" + baseurl + "/rest/api/3/customField/" + str(g) + "/option")
         data = requests.get(webURL, auth=auth_request, headers=headers)
-        fjson = json.loads(data.content)
-        self.get_field_value(fjson, c, field_name)
+        pjson = json.loads(data.content)
+        self.get_field_value(pjson=pjson, field_name=field_name)
 
-    def get_field_value(self, fjson, c, field_name):
-        for a in fjson["values"]:
+    def get_field_value(self, pjson=None, field_name=None):
+        for a in pjson["values"]:
             if a["value"] is not None:
                 j = a["value"]
                 print(j)
-                self.post_field_data(j, c, field_name)
+                self.rebuild_field_options(j=j, field_name=field_name)
 
-    def post_field_data(self, j, c, field_name, d=None):
+    def post_field_data(self, field_name):
         # TODO: to find the type of field_type used use this endpoint
-        # https://atlas-connect.atlassian.net/rest/api/3/field/search?type=custom
-        # values accepted "custom" or "system"
-        return self.rebuild_issue_custom_field_value(j, c=None, field_name=field_name, d=d)
+        #  https://atlas-connect.atlassian.net/rest/api/3/field/search?type=custom
+        #  values accepted "custom" or "system"
+        if list(fjson["issues"]) is not None:
+            for d in list(fjson["issues"]):
+                print("Matching, Issue key " + d["key"] + " to URL...")
+                webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
+                data = requests.get(webURL, auth=auth_request, headers=headers)
+                pjson = json.loads(data.content)
+                if data.status_code != 200:
+                    print("Error: Unable to access the Changelog History...\n", pjson, sep=",")
+                else:
+                    if d["key"] is not None:
+                        for i in pjson["values"]:
+                            fetch = i["items"]
+                            if fetch is not None:
+                                for j in fetch:
+                                    if j["field"] == field_name:
+                                        self.rebuild_issue_custom_field_value((j["field"], j["fieldId"],
+                                                                               j["fromString"], j["toString"]),
+                                                                              field_name=field_name, d=d)
 
     @staticmethod
-    def rebuild_issue_custom_field_value(j, c=None, field_name=None, d=None):
+    def rebuild_issue_custom_field_value(j=None, field_name=None, d=None):
         webURL = ("https://{}/rest/api/3/issue/{}".format(baseurl, d["key"]))
         payload = (
             {
@@ -193,10 +193,11 @@ class Field(IssueHistory):
         )
         response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
         if response.status_code != 204:
-            print("Error: Unable to Post the Data to the Issue...\n", response.status_code, sep="*")
+            print("Error: Unable to Post the Data to the Issue to {} with Status: {} \n"
+                  .format(d["key"], response.status_code))
             print("*" * 90)
         else:
-            print("Custom field Option Added to {}".format(d["key"]))
+            print("Custom field Option Added to Issue {}".format(d["key"]))
             print("*" * 90)
 
     # bulk create custom fields
