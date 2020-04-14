@@ -16,6 +16,9 @@ import requests
 from requests.auth import HTTPBasicAuth
 import sys
 
+__version__ = '0.2'
+__author__ = 'Prince Nyeche'
+
 
 # we need to find all the Issues where the customfield existed before
 class IssueHistory:
@@ -24,7 +27,7 @@ class IssueHistory:
     history that it has existed there before at least at one point in time.
     if we can find it, then we can iterate through all the various issue keys.
     so for now, we store all our issue key to d which we unpack as d["key"]
-    then we can call it later since we passed it as position parameter or kwargs
+    then we can call it later since we passed it as positional argument or kwargs
     """
 
     def filter_issue_keys(self, data):
@@ -39,7 +42,8 @@ class IssueHistory:
         field_name = v
         check = Field()
         if check.get_field(field_name) == field_name:
-            check.get_field_option(field_name=field_name, g=check.get_field_type(field_name=field_name))
+            a = check.get_field_types(field_name=field_name).__getitem__(1)
+            check.get_field_option(field_name=field_name, g=a)
         elif check.get_field(field_name) != field_name:
             context = f"A Context doesn't exist on {field_name}, we'll build it now, please add a context " \
                       "then press 'Enter' \n"
@@ -48,8 +52,9 @@ class IssueHistory:
                 for d in list(jql_data["issues"]):
                     print("Reading Issues: {} ".format(d["key"]))
                     self.get_field_issue_history(d, field_name)
-        else:
-            check.post_field_data(field_name=field_name)
+        # TODO: later we might add a condition to recreate a field back
+        # else:
+        # check.post_field_data(field_name=field_name)
 
     def get_field_issue_history(self, d, field_name):
         print("Matching, Issue key " + d["key"] + " to URL...")
@@ -126,7 +131,7 @@ class Field(IssueHistory):
     """
 
     @staticmethod
-    def get_field(field_name):
+    def get_field(field_name=None):
         webURL = ("https://" + baseurl + "/rest/api/3/field")
         data = requests.get(webURL, auth=auth_request, headers=headers)
         fjson = json.loads(data.content)
@@ -135,7 +140,8 @@ class Field(IssueHistory):
                 return c["name"]
 
     @staticmethod
-    def get_field_type(field_name=None):
+    # a is already defined, passing any value to it will result in error, we used it to call the return expression
+    def get_field_types(field_name=None):
         # TODO: to find the type of field_type used use this endpoint
         #  https://<your-instance>.atlassian.net/rest/api/3/field/search?type=custom
         #  values accepted "custom" or "system"
@@ -145,19 +151,7 @@ class Field(IssueHistory):
         pjson = json.loads(data.content)
         for a in pjson["values"]:
             if a["name"] == field_name:
-                x = a["schema"]["customId"]
-                return x
-
-    @staticmethod
-    def get_field_types(field_name=None):
-        webURL = ("https://{}/rest/api/3/field/search?type=custom"
-                  .format(baseurl))
-        data = requests.get(webURL, auth=auth_request, headers=headers)
-        pjson = json.loads(data.content)
-        for a in pjson["values"]:
-            if a["name"] == field_name:
-                x = a["schema"]["custom"]
-                return x
+                return a["schema"]["custom"], a["schema"]["customId"], a["id"]
 
     # wrapping the field options in order to post to issue
     def get_field_option(self, g=None, field_name=None):
@@ -174,9 +168,8 @@ class Field(IssueHistory):
                     print("Reading Issues: {} ".format(d["key"]))
                     self.get_field_issue_history(d=d, field_name=field_name)
         else:
-            print("Field has values posting to issue...")
+            print(f"{field_name} has values posting to issue...")
             for a in pjson["values"]:
-                #
                 if a["value"] is not None:
                     pass
             self.post_field_data(field_name=field_name)
@@ -236,17 +229,19 @@ class Field(IssueHistory):
     @staticmethod
     def rebuild_issue_custom_field_values(j=None, field_name=None, d=None):
         webURL = ("https://{}/rest/api/3/issue/{}".format(baseurl, d["key"]))
-        payload = (
+        check = Field()
+        b = check.get_field_types(field_name=field_name)
+        payload = \
             {
-                "update": {
-                    field_name:
-                        {
-                            "set": j[3]
-                        }
+                "fields":
+                    {
+                        b.__getitem__(2):
+                            {
+                               "value": j[3]
+                            }
 
-                }
+                    }
             }
-        )
         response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
         if response.status_code != 204:
             print("Error: Unable to Post the Data to the Issue to {} with Status: {} \n"
