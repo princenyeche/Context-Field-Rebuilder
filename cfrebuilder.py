@@ -138,6 +138,7 @@ class Field(IssueHistory):
     if the field has context it should exist, we should search for that instead and see
     if our options exist therein. if it doesn't then we build it back
     """
+
     @staticmethod
     def get_field(field_name=None):
         webURL = ("https://" + baseurl + "/rest/api/3/field")
