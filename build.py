@@ -1,15 +1,25 @@
-from cfrebuilder import IssueHistory, Field, make_session, login
+from cfrebuilder import __author__, __version__, jira_basic_auth
+"""
+**************************************************************************
+Supported Custom fields
+Fields :[Select List , User Picker, Cascading Select list, Labels, Components]
+The above fields  are supported with this script 
+**************************************************************************
+"""
 
 
-def write():
-    getfield = Field()
-    data = input("Enter the name")
-    if data is not None:
-        getfield.filter_issue_keys(data)
+# main function call
+def main():
+    a = __version__
+    b = __author__
+    print(
+        "*" * 100 + "\n" +
+        "*" * 3 + a.center(94) + "*" * 3 + "\n" +
+        "*" * 3 + b.center(94) + "*" * 3 + "\n" +
+        "*" * 100)
+    jira_basic_auth()
 
 
-@login()
-def find():
-    v = 'Name'
-    check = IssueHistory()
-    check.sub_filter(v)
+# Main Program Initialization here
+if __name__ == "__main__":
+    main()
