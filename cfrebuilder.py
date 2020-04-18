@@ -27,7 +27,7 @@ headers = None
 jql_data = None
 
 
-# we need to find all the Issues where the customfield existed before
+# we need to find all the Issues where the custom_field existed before
 class IssueHistory:
     """
     In order to get the custom_field, we need to know in the changelog  history
@@ -51,42 +51,44 @@ class IssueHistory:
             issue = CreateField()
             issue.create_cf(field_name=field_name, baseurl=baseurl, auth_request=auth_request, headers=headers)
 
-    def sub_filter(self, v):
+    def sub_filter(self, v, retries=3, trials="Try Again!"):
         field_name = v
         check = Field()
         if check.get_field(field_name=field_name) == field_name:
             a = check.get_field_types(field_name=field_name).__getitem__(1)
             check.get_field_option(field_name=field_name, g=a)
         elif check.get_field(field_name) != field_name:
-            context = f"A Context doesn't exist on {field_name}, we'll build it now, please add a context " \
-                      "then press 'Enter' \n"
-            input(context)
-            # TODO: User picker field doesn't support customField option endpoint,
+            context = f"A Context doesn't exist on {field_name}, we'll build it now, please add a context via the UI" \
+                      " then press 'Enter' \n"
+            repeat(context=context, retries=retries, field_name=field_name, trials=trials)
+            # TODO: User picker and Single line field doesn't support customField option endpoint,
             #  so no need to check that, let's only check if it has context
-            user_picker(field_name=field_name)
+            no_option(field_name=field_name)
         # TODO: later we might add a condition to recreate a field back
         # else:
         # check.post_field_data(field_name=field_name)
 
-    def get_field_issue_history(self, d=None, field_name=None):
-        print("Matching, Issue key " + d["key"] + " to URL...")
-        webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
-        data = requests.get(webURL, auth=auth_request, headers=headers)
-        fjson = json.loads(data.content)
-        if data.status_code != 200:
-            print("Error: Unable to access the Changelog History...\n", fjson, sep=",")
-        else:
-            if d["key"] is not None:
-                for i in fjson["values"]:
-                    fetch = i["items"]
-                    if fetch is not None:
-                        for j in fetch:
-                            if j["field"] == field_name:
-                                self.sort_options((j["field"], j["fieldId"],
-                                                   j["fromString"], j["toString"], j["to"]),
-                                                  d=d, field_name=field_name)
-                            else:
-                                print(f"Unable to find {field_name}")
+    def get_field_issue_history(self, field_name=None):
+        if list(jql_data["issues"]) is not None:
+            for d in list(jql_data["issues"]):
+                print("Matching, Issue key " + d["key"] + " to URL...")
+                webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
+                data = requests.get(webURL, auth=auth_request, headers=headers)
+                fjson = json.loads(data.content)
+                if data.status_code != 200:
+                    print("Error: Unable to access the Changelog History...\n", fjson, sep=",")
+                else:
+                    if d["key"] is not None:
+                        for i in fjson["values"]:
+                            fetch = i["items"]
+                            if fetch is not None:
+                                for j in fetch:
+                                    if j["field"] == field_name:
+                                        self.sort_options((j["field"], j["fieldId"],
+                                                           j["fromString"], j["toString"], j["to"]),
+                                                          d=d, field_name=field_name)
+                                    # else:
+                                    # print(f"Unable to find {field_name}")
 
     # we store all the values of j where it's not duplicated
     def sort_options(self, j=None, d=None, field_name=None):
@@ -99,8 +101,6 @@ class IssueHistory:
         """
         s = j[1]
         seq3 = s.strip("customfield_")
-        if 'None' in str(j[3]) or 'None' not in str(j[3]):
-            pass
         try:
             self.create_back_cf_options(j=j, seq3=seq3, d=d, field_name=field_name)
         except ValueError:
@@ -109,28 +109,55 @@ class IssueHistory:
     # below method is to create back the options for the custom-field, since we can identify it
     @staticmethod
     def create_back_cf_options(j=None, seq3=None, d=None, field_name=None):
+        x = Field()
+        # handling multiple option values to re-create back.
         print("*" * 90)
         webURL = ("https://{}/rest/api/3/customField/{}/option".format(baseurl, seq3))
-        payload = (
-            {
-                "options": [
-                    {
-                        "cascadingOptions": [],
-                        "value": j[3]
-                    }
-                ]
+        if x.get_field_types(field_name=field_name).__getitem__(
+                0) == "com.atlassian.jira.plugin.system.customfieldtypes:multiselect":
+            x.fix_multi(j=j)
+            payload = (
+                {
+                    "options": [
+                        {
+                            "cascadingOptions": [],
+                            "value": x.fix_multi()
+                        }
+                    ]
 
-            }
-        )
-        data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
-        if data.status_code != 201:
-            print("Error: Unable to Post the Data to the Issue...", data.status_code, sep="*")
+                }
+            )
+            data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
+            csd(data=data, j=j, d=d, field_name=field_name)
+        elif str(j[3]) == "":
+            pass
         else:
-            print("Creating {} field option for {}".format(j[3], j[0]))
-            run = Field()
-            run.rebuild_issue_custom_field_value(j=j, field_name=field_name, d=d)
+            payload = (
+                {
+                    "options": [
+                        {
+                            "cascadingOptions": [],
+                            "value": str("{}").format(j[3])
+                        }
+                    ]
+
+                }
+            )
+            data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
+            csd(data=data, j=j, d=d, field_name=field_name)
+        #
 
 
+def csd(data=None, j=None, d=None, field_name=None):
+    if data.status_code != 201:
+        print("Error: Unable to Post the Data to the Issue...".format(data.status_code))
+    else:
+        print("Creating {} field option for {}".format(j[3], j[0]))
+        run = Field()
+        run.rebuild_issue_custom_field_values(j=j, field_name=field_name, d=d)
+
+
+# sub_class to IssueHistory
 class Field(IssueHistory):
     """
     `get_field` and `get_field_type`
@@ -170,23 +197,33 @@ class Field(IssueHistory):
         user = Field()
         if user.get_field_types(field_name=field_name).__getitem__(
                 0) == "com.atlassian.jira.plugin.system.customfieldtypes" \
-                      ":userpicker":
-            print(f"{field_name} doesn't have options, let's continue with posting the values")
-            user.post_field_data(field_name=field_name)
+                      ":userpicker" or \
+                user.get_field_types(field_name=field_name).__getitem__(
+                    0) == "com.atlassian.jira.plugin.system.customfieldtypes:textfield":
+            print(f"{field_name} doesn't need options, this field self rebuilds")
+            print(f"Rebuilding not required...OK")
         else:
             self.get_field_value(pjson=pjson, field_name=field_name)
 
     def get_field_value(self, pjson=None, field_name=None):
         if str(pjson["values"]) == "[]":
             print(f"The Context for {field_name} has no values, defaulting to build options...")
-            f = dkey()
-            self.get_field_issue_history(d=f, field_name=field_name)
+            self.get_field_issue_history(field_name=field_name)
         else:
             print(f"{field_name} has values posting to issue...")
             for a in pjson["values"]:
                 if a["value"] is not None:
                     pass
             self.post_field_data(field_name=field_name)
+
+    @staticmethod # function for get multichoices values
+    def fix_multi(j=None):
+        if str(j[3]) is not None:
+            m = str(j[3])
+            for i in m.strip():
+                return i
+        else:
+            return str(j[3])
 
     def post_field_data(self, field_name=None):
         if list(jql_data["issues"]) is not None:
@@ -214,7 +251,8 @@ class Field(IssueHistory):
                                                                                   field_name=field_name, d=d)
                                         else:
                                             self.rebuild_issue_custom_field_values((j["field"], j["fieldId"],
-                                                                                    j["fromString"], j["toString"]),
+                                                                                    j["fromString"], j["toString"],
+                                                                                    j["to"]),
                                                                                    field_name=field_name, d=d)
 
     @staticmethod
@@ -238,23 +276,24 @@ class Field(IssueHistory):
         webURL = ("https://{}/rest/api/3/issue/{}".format(baseurl, d["key"]))
         b = self.get_field_types(field_name=field_name)
         # TODO: if the value of the field is 'None' (empty) we would like to post that as well.
-        if 'None' in str(j[3]):
-            x = ""
+        #  find out, how to clear a field value
+        if j[3] == "":
+            print("Posting None data...")
             # TODO: find a way to be able to clear the field which has none, so  it shows as "None"
             payload = \
                 {
-                    "fields":
-                        {
-                            b.__getitem__(2):
-                                {
-                                    "value": x.strip("")
-                                }
+                    "update": {
+                        b.__getitem__(2):
+                            {
+                                "set": j[4]
+                            }
 
-                        }
+                    }
                 }
             response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
             psd(response=response, d=d, j=j)
         else:
+            print("Not posting None data...")
             payload = \
                 {
                     "fields":
@@ -273,7 +312,7 @@ class Field(IssueHistory):
 # call to if-else function
 def psd(response=None, d=None, j=None):
     if response.status_code != 204:
-        print("Error: Unable to Post {!r} Data to the Issue to {} with Status: {} \n"
+        print("Error: Unable to Post {} Data to the Issue to {} with Status: {} \n"
               .format(j[3], d["key"], response.status_code))
         print("*" * 90)
     else:
@@ -286,20 +325,21 @@ def dkey(d=None):
     if list(jql_data["issues"]) is not None:
         for d in list(jql_data["issues"]):
             print("Reading Issues: {} ".format(d["key"]))
-        return d["key"]
+        return d
 
 
 # function for user_picker fields
-def user_picker(field_name=None):
+def no_option(field_name=None):
     user = Field()
     if user.get_field_types(field_name=field_name).__getitem__(
             0) == "com.atlassian.jira.plugin.system.customfieldtypes" \
-                  ":userpicker":
-        print(f"{field_name} doesn't have options, let's continue with posting the values")
-        user.post_field_data(field_name=field_name)
+                  ":userpicker" or \
+            user.get_field_types(field_name=field_name).__getitem__(
+                0) == "com.atlassian.jira.plugin.system.customfieldtypes:textfield":
+        print(f"{field_name} doesn't need options, rebuilding...")
+        print(f"Rebuilding not required...OK")
     else:
-        f = dkey()
-        user.get_field_issue_history(d=f, field_name=field_name)
+        user.get_field_issue_history(field_name=field_name)
 
 
 # running get request for authentication and keep our session active
@@ -348,3 +388,15 @@ def validate(email=None, token=None, baseurl=None):
         print("Your token can't be empty")
     elif baseurl == "":
         print("Your Instance Name can't be empty...")
+
+
+def repeat(context=None, field_name=None, retries=None, trials=None):
+    check = Field()
+    while check.get_field(field_name) != field_name:
+        input(context)
+        # give the viewer 2 chances to add a context before proceeding.
+        retries -= 1
+        if retries < 0:
+            raise ValueError("It seems you do not want to add a context on \"{}\" field"
+                             .format(field_name))
+        print(trials)
