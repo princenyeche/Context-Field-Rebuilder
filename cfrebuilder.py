@@ -110,18 +110,34 @@ class IssueHistory:
     @staticmethod
     def create_back_cf_options(j=None, seq3=None, d=None, field_name=None):
         x = Field()
+        c = ""
         # handling multiple option values to re-create back.
         print("*" * 90)
         webURL = ("https://{}/rest/api/3/customField/{}/option".format(baseurl, seq3))
         if x.get_field_types(field_name=field_name).__getitem__(
                 0) == "com.atlassian.jira.plugin.system.customfieldtypes:multiselect":
-            x.fix_multi(j=j)
+            if x.fix_multi(j=j).__len__() > 0:
+                c = x.fix_multi(j=j)
+                for l in c:
+                    payload = (
+                        {
+                            "options": [
+                                {
+                                    "cascadingOptions": [],
+                                    "value": l
+                                }
+                            ]
+
+                        }
+                    )
+                    data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
+                    csd(data=data, j=j, d=d, field_name=field_name)
             payload = (
                 {
                     "options": [
                         {
                             "cascadingOptions": [],
-                            "value": x.fix_multi()
+                            "value": c
                         }
                     ]
 
@@ -216,14 +232,16 @@ class Field(IssueHistory):
                     pass
             self.post_field_data(field_name=field_name)
 
-    @staticmethod # function for get multichoices values
+    @staticmethod  # function for get multichoices values
+    # TODO: need to be able to get this field value as a tuple then post it back.
     def fix_multi(j=None):
-        if str(j[3]) is not None:
-            m = str(j[3])
-            for i in m.strip():
-                return i
+        m = str(j[3]).split(",")
+        if m.__len__() > 0:
+            print(m)
+            return m
         else:
-            return str(j[3])
+            print(m)
+            return m
 
     def post_field_data(self, field_name=None):
         if list(jql_data["issues"]) is not None:
