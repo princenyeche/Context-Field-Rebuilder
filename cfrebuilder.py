@@ -45,21 +45,15 @@ class IssueHistory:
         jql_data = json.loads(data.content)
         print("Filtering Issue Keys, {} Issues returned...".format(str(jql_data["total"])))
         field_name = input("Enter the Name of the Custom Field: \n")
-        key = Field()
-        issue = CreateField()
-        a = key.get_field(field_name=field_name)
         # TODO: to properly find a way to validate all fields on the instance.
-        if field_name == a.__getitem__(0):
+        if field_name is not None:
             self.sub_filter(q=field_name)
-        elif field_name not in a.__getitem__(0) or \
-                field_name != key.get_field_types(field_name=field_name).__getitem__(3):
-            print(f"\"{field_name}\" doesn't exist, do you want to Create it? Type a New Name")
-            issue.create_cf(field_name=field_name, baseurl=baseurl, auth_request=auth_request, headers=headers)
 
     @staticmethod
     def sub_filter(q, retries=3, trials="Try Again!"):
         field_name = q
         check = Field()
+        issue = CreateField()
         if check.get_field(field_name=field_name).__getitem__(0) == field_name:
             # a = check.get_field_types(field_name=field_name).__getitem__(0)
             a = check.get_field(field_name=field_name).__getitem__(3)
@@ -71,6 +65,9 @@ class IssueHistory:
             # TODO: Certain field types doesn't support customField option endpoint. check `build.py`
             #  for a list of fields. so no need to rebuild that, let's only check if it has context
             no_option(field_name=field_name)
+        else:
+            print(f"\"{field_name}\" doesn't exist, do you want to Create it? Type a New Name")
+            issue.create_cf(field_name=field_name, baseurl=baseurl, auth_request=auth_request, headers=headers)
         #
 
     # TODO: Issue History search, find out the values in change log and extract and transform that.
@@ -102,7 +99,7 @@ class IssueHistory:
         :param j: stores the value of our fromString and toString we'll need this later
         but we only want the toString which is j[3]
         :param d: stores our issue key, so we can always call this later as d["key"]
-        Below we ensure we extract our cf id and the values in j.
+        Below we ensure we extract our cf id and the values in j[1].
         """
         s = j[1]
         seq3 = s.strip("customfield_")
@@ -159,7 +156,7 @@ class IssueHistory:
             )
             data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
             csd(data=data, j=j, d=d, field_name=field_name)
-        #
+        # end create option method
 
 
 def csd(data=None, j=None, d=None, field_name=None):
@@ -167,7 +164,7 @@ def csd(data=None, j=None, d=None, field_name=None):
         print("Error: Unable to Post the Data to the Issue...".format(data.status_code))
     else:
         print("Creating {} field option for {}".format(j[3], j[0]))
-        #
+        # end or exit post request
 
 
 # sub_class to IssueHistory
@@ -180,7 +177,8 @@ class Field(IssueHistory):
     """
 
     @staticmethod
-    # c is returned as a tuple, we can use tuple method to fetch the required value
+    # c is returned as a tuple, we can use methods in tuple to fetch the required value
+    # e.g. __getitem__() method which accepts int value for index beginning at 0.
     def get_field(field_name=None):
         webURL = ("https://" + baseurl + "/rest/api/3/field")
         data = requests.get(webURL, auth=auth_request, headers=headers)
@@ -191,7 +189,7 @@ class Field(IssueHistory):
                     return c["name"], c["id"], c["schema"]["custom"], c["schema"]["customId"]
 
     @staticmethod
-    # a is returned as a tuple, we can use tuple method to fetch the required value
+    # a is returned as a tuple, we can use methods in tuple to fetch the required value, same as above.
     def get_field_types(field_name=None):
         # TODO: to find the type of field_type used, use this endpoint
         #  https://<your-instance>.atlassian.net/rest/api/3/field/search?type=custom
@@ -281,22 +279,22 @@ class Field(IssueHistory):
                                                                                 j["to"]),
                                                                                field_name=field_name, d=d)
 
+    # base method for creating back custom field values
     def rebuild_issue_custom_field_values(self, j=None, field_name=None, d=None):
         v = CreateField()
         webURL = ("https://{}/rest/api/3/issue/{}".format(baseurl, d["key"]))
         b = self.get_field(field_name=field_name)
         # TODO: if the value of the field is 'None' (empty) we would like to post that as well.
-        #  find out, how to clear a field value
         if j[3] == "":
             print("Posting None data...")
-            # TODO: find a way to be able to clear the field which has none, so  it shows as "None"
+            # TODO: we're now able to Post "None" data
             payload = \
                 {
                     "fields": {
                         b.__getitem__(1):
-                            {
-                                "value": '{}'
-                            }
+
+                            j[4]
+
                     }
                 }
             response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
@@ -306,24 +304,39 @@ class Field(IssueHistory):
         elif b.__getitem__(
                 2) == v.multiselect or \
                 b.__getitem__(2) == v.multicheckboxes:
-            print(post_multi(field_name=field_name, j=j))
+            print(post_multi(j=j))
             payload = \
                 {
                     "fields":
                         {
                             b.__getitem__(1):
                                 [
-                                    # TODO: Basically, the post needs to be in below format
-                                    #  we need to be able to iterate through the field options and post it
-                                    post_multi(j=j, field_name=field_name)
+                                    {
+                                        # TODO: Basically, the post needs to be in below format
+                                        #  we need to be able to iterate through the field options and post it
+                                        post_multi(j=j)
+                                    }
                                 ]
 
                         }
                 }
             response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
             psd(response=response, d=d, j=j)
-        # c = self.fix_multi(j=j)
-        # f = x.fix_multi(j=j)
+        elif b.__getitem__(
+                2) == v.multiselect or \
+                b.__getitem__(2) == v.multicheckboxes and j[3] == "":
+            # TODO: we're now able to Post "None" data to Multi choice fields
+            payload = \
+                {
+                    "fields": {
+                        b.__getitem__(1):
+
+                            []
+
+                    }
+                }
+            response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
+            psd(response=response, d=d, j=j)
         # Posting single values for normal fields
         else:
             print("Not posting None data...")
@@ -344,7 +357,6 @@ class Field(IssueHistory):
 
 # call to if-else function
 def psd(response=None, d=None, j=None):
-    x = Field()
     if response.status_code != 204:
         print("Error: Unable to Post {} Data to the Issue to {} with Status: {} \n"
               .format(j[3], d["key"], response.status_code))
@@ -451,7 +463,7 @@ def validate(email=None, token=None, baseurl=None):
 
 def repeat(context=None, field_name=None, retries=None, trials=None):
     check = Field()
-    while check.get_field(field_name) != field_name:
+    while check.get_field(field_name).__getitem__(0) != field_name:
         input(context)
         # give the viewer 2 chances to add a context before proceeding.
         retries -= 1
@@ -461,20 +473,29 @@ def repeat(context=None, field_name=None, retries=None, trials=None):
         print(trials)
 
 
-def post_multi(j=None, field_name=None, post=None):
-    # TODO: post method requires id of multi choice fields
-    x = Field()
+def post_multi(j=None):
+    # TODO: post method multi choice fields
     m = str(j[3]).split(",")
-    webURL = ("https://{}/rest/api/3/customField/{}/option".
+    f = []
+    if m is not None:
+        post = \
+            {
+                "value": u for u in m
+            }
+        f.append(post)
+        return f.insert(0, f)
+
+
+def context_check(field_name=None):
+    # TODO: check the context endpoint
+    x = Field()
+    webURL = ("https://{}/rest/api/3/field/{}/contexts".
               format(baseurl, x.get_field(field_name=field_name).__getitem__(3)))
     data = requests.get(webURL, auth=auth_request, headers=headers)
     rest = json.loads(data.content)
-    for u in rest["values"]:
-        for h in m:
-            if h in m:
-                post = \
-                    {
-                        "id": str(u["id"]),
-                        "value": u["value"],
-                    }
-            return post
+    if rest["values"] == "[]":
+        return True
+    elif str(rest["errors"]):
+        return True
+    else:
+        return False
