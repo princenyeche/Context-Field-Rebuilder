@@ -68,9 +68,9 @@ class IssueHistory:
         else:
             print(f"\"{field_name}\" doesn't exist, do you want to Create it? Type a New Name")
             issue.create_cf(field_name=field_name, baseurl=baseurl, auth_request=auth_request, headers=headers)
-        #
+        # end of if block
 
-    # TODO: Issue History search, find out the values in change log and extract and transform that.
+    # Issue History search, it finds out the values in the change log then extract and transform it.
     def get_field_issue_history(self, field_name=None):
         if list(jql_data["issues"]) is not None:
             for d in list(jql_data["issues"]):
@@ -284,10 +284,9 @@ class Field(IssueHistory):
         v = CreateField()
         webURL = ("https://{}/rest/api/3/issue/{}".format(baseurl, d["key"]))
         b = self.get_field(field_name=field_name)
-        # TODO: if the value of the field is 'None' (empty) we would like to post that as well.
+        # if the value of the field is 'None' (empty) we would like to post that as well.
         if j[3] == "":
-            print("Posting None data...")
-            # TODO: we're now able to Post "None" data
+            # we're now able to Post "None" data, works for single / cascading select list
             payload = \
                 {
                     "fields": {
@@ -304,19 +303,71 @@ class Field(IssueHistory):
         elif b.__getitem__(
                 2) == v.multiselect or \
                 b.__getitem__(2) == v.multicheckboxes:
-            print(post_multi(j=j))
+            # TODO: post method multi choice fields
+            m = str(j[3])
+            f = "value"
+            if m.split(",").__len__() == 1:
+                payload = \
+                    {
+                        "fields":
+                            {
+                                b.__getitem__(1):
+                                    [
+                                        # TODO: able to post single values
+                                        {f: m}
+
+                                    ]
+
+                            }
+                    }
+                response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
+                psd(response=response, d=d, j=j)
+            # consider using  m.split("," or " ")
+            elif m.split(",").__len__() > 1:
+                post_multi(m=m, f=f)
+                payload = \
+                    {
+                        "fields":
+                            {
+                                b.__getitem__(1):
+                                # [
+                                # TODO: the post needs to be in below format
+                                #  we need to be able to iterate through the field options and post it
+                                    post_multi(m=m, f=f)
+                                # ]
+
+                            }
+                    }
+                response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
+                psd(response=response, d=d, j=j)
+        elif b.__getitem__(
+                2) == v.labels:
+            payload = \
+                {
+                    "fields":
+                        {
+                            b.__getitem__(1): [
+                                j[3]
+                            ]
+
+                        }
+                }
+            response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
+            psd(response=response, d=d, j=j)
+        # TODO: below is used to post to cascading select field, we think the transmutation should work
+        elif b.__getitem__(
+                2) == v.cascadingselect:
             payload = \
                 {
                     "fields":
                         {
                             b.__getitem__(1):
-                                [
-                                    {
-                                        # TODO: Basically, the post needs to be in below format
-                                        #  we need to be able to iterate through the field options and post it
-                                        post_multi(j=j)
+                                {
+                                    "value": str(j["toString"]["Parent Values"]),
+                                    "child": {
+                                        "value": str(j["toString"]["Level 1 Values"])
                                     }
-                                ]
+                                }
 
                         }
                 }
@@ -324,8 +375,9 @@ class Field(IssueHistory):
             psd(response=response, d=d, j=j)
         elif b.__getitem__(
                 2) == v.multiselect or \
-                b.__getitem__(2) == v.multicheckboxes and j[3] == "":
-            # TODO: we're now able to Post "None" data to Multi choice fields
+                b.__getitem__(2) == v.multicheckboxes or \
+                b.__getitem__(2) == v.labels and j[3] == "":
+            # we're now able to Post "None" data to Multi_choice fields
             payload = \
                 {
                     "fields": {
@@ -473,17 +525,13 @@ def repeat(context=None, field_name=None, retries=None, trials=None):
         print(trials)
 
 
-def post_multi(j=None):
-    # TODO: post method multi choice fields
-    m = str(j[3]).split(",")
-    f = []
-    if m is not None:
-        post = \
-            {
-                "value": u for u in m
-            }
-        f.append(post)
-        return f.insert(0, f)
+# Posting multi_choice fields
+def post_multi(m=None, f=None):
+    c = []
+    for u in m.split(","):
+        r = {f: u}
+        c.append(r)
+    return c
 
 
 def context_check(field_name=None):
