@@ -5,6 +5,7 @@ Script   : Context Field Rebuilder for Custom field
 Author   : Prince Nyeche
 Platform : Atlassian Jira Cloud
 Version  : 0.2
+Function : Script helps to build back deleted custom field context.
 **************************************************************************
 Required libraries : requests
 Download URL       : http://python-requests.org
@@ -120,7 +121,7 @@ class CreateField:
             {
                 "searcherKey": self.field_search_key,
                 "name": field_name,
-                "description": "Custom field created through cfrebuilder - you can always change later",
+                "description": "Custom field created through cfrebuilder - you can always change this later",
                 "type": self.field_type
 
             }
