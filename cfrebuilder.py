@@ -287,61 +287,66 @@ class Field(IssueHistory):
         # if the value of the field is 'None' (empty) we would like to post that as well.
         if j[3] == "":
             # we're now able to Post "None" data, works for single / cascading select list
-            payload = \
-                {
-                    "fields": {
-                        b.__getitem__(1):
+            print("Hello select")
+            if b.__getitem__(2) == v.multicheckboxes or \
+                    b.__getitem__(2) == v.multiselect:
+                payload = \
+                    {
+                        "fields": {
+                            b.__getitem__(1):
 
-                            j[4]
+                                []
 
+                        }
                     }
-                }
-            response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
-            psd(response=response, d=d, j=j)
-        # posting values for multi-checkbox / multi select fields
+                response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
+                psd(response=response, d=d, j=j)
+            elif b.__getitem__(2) == v.labels:
+                payload = \
+                    {
+                        "fields": {
+                            b.__getitem__(1):
+
+                                []
+
+                        }
+                    }
+                response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
+                psd(response=response, d=d, j=j)
+            else:
+                payload = \
+                    {
+                        "fields": {
+                            b.__getitem__(1):
+
+                                j[4]
+
+                        }
+                    }
+                response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
+                psd(response=response, d=d, j=j)
+                # posting values for multi-checkbox / multi select fields
         # TODO: Be able to post values for multiple choice fields (Multi_checkboxes, Multi_select)
         elif b.__getitem__(
                 2) == v.multiselect or \
                 b.__getitem__(2) == v.multicheckboxes:
             # TODO: post method multi choice fields
-            m = str(j[3])
-            f = "value"
-            if m.split(",").__len__() == 1:
-                payload = \
-                    {
-                        "fields":
-                            {
-                                b.__getitem__(1):
-                                    [
-                                        # TODO: able to post single values
-                                        {f: m}
+            print("hello multi")
+            payload = \
+                {
+                    "fields":
+                        {
+                            b.__getitem__(1):
+                            #  we need to be able to iterate through the field options and post it
+                                post_multi(j=j)
 
-                                    ]
-
-                            }
-                    }
-                response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
-                psd(response=response, d=d, j=j)
-            # consider using  m.split("," or " ")
-            elif m.split(",").__len__() > 1:
-                post_multi(m=m, f=f)
-                payload = \
-                    {
-                        "fields":
-                            {
-                                b.__getitem__(1):
-                                # [
-                                # TODO: the post needs to be in below format
-                                #  we need to be able to iterate through the field options and post it
-                                    post_multi(m=m, f=f)
-                                # ]
-
-                            }
-                    }
-                response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
-                psd(response=response, d=d, j=j)
+                        }
+                }
+            response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
+            psd(response=response, d=d, j=j)
         elif b.__getitem__(
                 2) == v.labels:
+            print("Hello labels")
             payload = \
                 {
                     "fields":
@@ -357,6 +362,7 @@ class Field(IssueHistory):
         # TODO: below is used to post to cascading select field, we think the transmutation should work
         elif b.__getitem__(
                 2) == v.cascadingselect:
+            print("Hello cascade")
             payload = \
                 {
                     "fields":
@@ -373,25 +379,9 @@ class Field(IssueHistory):
                 }
             response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
             psd(response=response, d=d, j=j)
-        elif b.__getitem__(
-                2) == v.multiselect or \
-                b.__getitem__(2) == v.multicheckboxes or \
-                b.__getitem__(2) == v.labels and j[3] == "":
-            # we're now able to Post "None" data to Multi_choice fields
-            payload = \
-                {
-                    "fields": {
-                        b.__getitem__(1):
-
-                            []
-
-                    }
-                }
-            response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
-            psd(response=response, d=d, j=j)
         # Posting single values for normal fields
         else:
-            print("Not posting None data...")
+            print("hello single")
             payload = \
                 {
                     "fields":
@@ -526,12 +516,20 @@ def repeat(context=None, field_name=None, retries=None, trials=None):
 
 
 # Posting multi_choice fields
-def post_multi(m=None, f=None):
+def post_multi(j=None):
+    # TODO: post function multi choice fields
+    m = str(j[3])
+    f = "value"
     c = []
-    for u in m.split(","):
-        r = {f: u}
-        c.append(r)
-    return c
+    if m.split(",").__len__() == 1:
+        k = [{f: m}]
+        return k
+    # consider using  m.split("," or " ")
+    elif m.split(",").__len__() > 1:
+        for u in m.split(","):
+            r = {f: u}
+            c.append(r)
+        return c
 
 
 def context_check(field_name=None):
