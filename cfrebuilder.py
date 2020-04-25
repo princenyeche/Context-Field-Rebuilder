@@ -28,12 +28,13 @@ auth_request = None
 headers = None
 jql_data = None
 cm_dat = None
+field_name = None
 
 
 # we need to find all the Issues where the custom_field existed before
 class IssueHistory:
     """
-    In order to get the custom_field, we need to know in the changelog  history
+    In order to get the custom_field values, we need to know in the changelog  history
     that it has existed there before at least at one point in time. if we can find it,
     then we can iterate through all the various issue keys. so for now, we store all
     our issue key to d which we unpack as d["key"] then we can call it
@@ -42,36 +43,44 @@ class IssueHistory:
 
     def filter_issue_keys(self, data=None):
         global jql_data  # saving our JQL search here in a Global variable
+        global field_name  # our custom field name
         jql_data = json.loads(data.content)
+        x = Field()
+        i = CreateField()
         print("Filtering Issue Keys, {} Issues returned...".format(str(jql_data["total"])))
         field_name = input("Enter the Name of the Custom Field: \n")
         # TODO: to properly find a way to validate all fields on the instance.
-        if field_name is not None:
+        context = f"Make sure a context for \"{field_name}\" exist, by checking it " \
+                  f"via the UI https://{baseurl}/secure/admin/ViewCustomFields.jspa " \
+                  f"and Add a context, then press 'Enter' to continue.\n"
+        input(context)
+        a = x.get_field()
+        if a is not None:
             self.sub_filter(q=field_name)
+        elif a is None:
+            print(f"\"{field_name}\" seems like it doesn't exist, do you want to Create it? Please check in the"
+                  f" UI before proceeding. if unsure!?")
+            i.create_cf(field_name=field_name, baseurl=baseurl, auth_request=auth_request, headers=headers)
 
     @staticmethod
     def sub_filter(q, retries=3, trials="Try Again!"):
         field_name = q
-        check = Field()
-        issue = CreateField()
-        if check.get_field(field_name=field_name).__getitem__(0) == field_name:
+        x = Field()
+        if x.get_field().__getitem__(0) == field_name:
             # a = check.get_field_types(field_name=field_name).__getitem__(0)
-            a = check.get_field(field_name=field_name).__getitem__(3)
-            check.get_field_option(field_name=field_name, g=a)
-        elif check.get_field(field_name).__getitem__(0) != field_name:
+            a = x.get_field().__getitem__(3)
+            x.get_field_option(g=a)
+        elif x.get_field().__getitem__(0) != field_name:
             context = f"A Context doesn't exist on {field_name}, we'll build it now, please add a context via the UI" \
                       " then press 'Enter' \n"
-            repeat(context=context, retries=retries, field_name=field_name, trials=trials)
+            repeat(context=context, retries=retries, trials=trials)
             # TODO: Certain field types doesn't support customField option endpoint. check `build.py`
             #  for a list of fields. so no need to rebuild that, let's only check if it has context
-            no_option(field_name=field_name)
-        else:
-            print(f"\"{field_name}\" doesn't exist, do you want to Create it? Type a New Name")
-            issue.create_cf(field_name=field_name, baseurl=baseurl, auth_request=auth_request, headers=headers)
+            no_option()
         # end of if block
 
     # Issue History search, it finds out the values in the change log then extract and transform it.
-    def get_field_issue_history(self, field_name=None):
+    def get_field_issue_history(self):
         if list(jql_data["issues"]) is not None:
             for d in list(jql_data["issues"]):
                 print("Matching, Issue key " + d["key"] + " to URL...")
@@ -87,33 +96,25 @@ class IssueHistory:
                             if fetch is not None:
                                 for j in fetch:
                                     if j["field"] == field_name:
-                                        self.sort_options((j["field"], j["fieldId"],
-                                                           j["fromString"], j["toString"], j["to"]),
-                                                          d=d, field_name=field_name)
+                                        self.create_back_cf_options((j["field"], j["fieldId"],
+                                                                     j["fromString"], j["toString"], j["to"]),
+                                                                    d=d)
                                     # end of loop.
-
-    # we store all the values of j
-    def sort_options(self, j=None, d=None, field_name=None):
-        """
-        :param field_name: contains the name of our custom field
-        :param j: stores the value of our fromString and toString we'll need this later
-        but we only want the toString which is j[3]
-        :param d: stores our issue key, so we can always call this later as d["key"]
-        Below we ensure we extract our cf id and the values in j[1].
-        """
-        s = j[1]
-        seq3 = s.strip("customfield_")
-        try:
-            self.create_back_cf_options(j=j, seq3=seq3, d=d, field_name=field_name)
-        except NameError:
-            print("Something went wrong: {}".format(sys.exc_info()[1]))
 
     # below method is to create back the options for the custom_field, since we can identify it
     @staticmethod
-    def create_back_cf_options(j=None, seq3=None, d=None, field_name=None):
+    def create_back_cf_options(j=None, d=None):
+        """
+         :param j: stores the value of our fromString and toString we'll need this later
+         but we only want the toString which is j[3]
+         :param d: stores our issue key, so we can always call this later as d["key"]
+         Below we ensure we extract our cf id and the values in j[1].
+        """
         x = Field()
         v = CreateField()
-        z = x.get_field(field_name=field_name).__getitem__(
+        s = j[1]
+        seq3 = s.strip("customfield_")
+        z = x.get_field().__getitem__(
             2)
         # handling multiple option values to re-create back it's option.
         print("*" * 90)
@@ -142,6 +143,34 @@ class IssueHistory:
                         csd(data=data, j=j, d=d, field_name=field_name)
         elif str(j[3]) == "":
             pass
+        elif z == v.cascadingselect:
+            print(j[3])
+            payload = (
+                {
+                    "options": [
+                        {
+                            "cascadingOptions": [],
+                            "value": j[3]
+                        },
+                        {
+                            "cascadingOptions": [
+                                "Child option"
+                            ],
+                            "value": j[3]
+                        }
+                        # {
+                        #   "cascadingOptions": [
+                        #       "Sub-option",
+                        #        "Sub-option 2"
+                        #   ],
+                        #   "value": j[3]
+                        # }
+                    ]
+
+                }
+            )
+            data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
+            csd(data=data, j=j, d=d, field_name=field_name)
         else:
             payload = (
                 {
@@ -179,7 +208,7 @@ class Field(IssueHistory):
     @staticmethod
     # c is returned as a tuple, we can use methods in tuple to fetch the required value
     # e.g. __getitem__() method which accepts int value for index beginning at 0.
-    def get_field(field_name=None):
+    def get_field():
         webURL = ("https://" + baseurl + "/rest/api/3/field")
         data = requests.get(webURL, auth=auth_request, headers=headers)
         fjson = json.loads(data.content)
@@ -190,11 +219,10 @@ class Field(IssueHistory):
 
     @staticmethod
     # a is returned as a tuple, we can use methods in tuple to fetch the required value, same as above.
-    def get_field_types(field_name=None):
+    def get_field_types():
         # TODO: to find the type of field_type used, use this endpoint
         #  https://<your-instance>.atlassian.net/rest/api/3/field/search?type=custom
-        #  values accepted "custom".
-        #  not reliable, since the default page returned is only 50.
+        #  values accepted "custom". not reliable, since the default page returned is only 50.
         webURL = ("https://{}/rest/api/3/field/search?type=custom"
                   .format(baseurl))
         data = requests.get(webURL, auth=auth_request, headers=headers)
@@ -204,14 +232,14 @@ class Field(IssueHistory):
                 return a["schema"]["custom"], a["schema"]["customId"], a["id"], a["name"]
 
     # wrapping the field options in order to post to issue
-    def get_field_option(self, g=None, field_name=None):
+    def get_field_option(self, g=None):
         global cm_dat
         v = CreateField()
         user = Field()
         webURL = ("https://" + baseurl + "/rest/api/3/customField/" + str(g) + "/option")
         data = requests.get(webURL, auth=auth_request, headers=headers)
         cm_dat = json.loads(data.content)
-        k = user.get_field(field_name=field_name).__getitem__(
+        k = user.get_field().__getitem__(
             2)
         if k == v.userpicker or \
                 k == v.textfield or \
@@ -222,23 +250,24 @@ class Field(IssueHistory):
                 k == v.textarea or \
                 k == v.multigrouppicker or \
                 k == v.multiuserpicker or \
-                k == v.grouppicker:
+                k == v.grouppicker or \
+                k == v.labels:
             print(f"{field_name} doesn't need options, this field self rebuilds")
             print(f"Rebuilding not required...OK")
             sys.exit(0)
         else:
-            self.get_field_value(cm_dat=cm_dat, field_name=field_name)
+            self.get_field_value(cm_dat=cm_dat)
 
-    def get_field_value(self, cm_dat=None, field_name=None):
+    def get_field_value(self, cm_dat=None):
         if str(cm_dat["values"]) == "[]":
             print(f"The Context for {field_name} has no values, defaulting to build options...")
-            self.get_field_issue_history(field_name=field_name)
+            self.get_field_issue_history()
         else:
             print(f"{field_name} has values posting to issue...")
             for a in cm_dat["values"]:
                 if a["value"] is not None:
                     pass
-            self.post_field_data(field_name=field_name)
+            self.post_field_data()
 
     @staticmethod
     # TODO: check if values has been posted before
@@ -251,14 +280,14 @@ class Field(IssueHistory):
             return i
 
     @staticmethod  # method for getting multi_choices values
-    # TODO: get this field value as a tuple then post it back.
+    # TODO: get this field value as a list then post it back.
     def fix_multi(j=None):
         m = str(j[3]).split(",")
         if m.__len__() > 0:
             return m
 
     # if values exist, let's just post it instead.
-    def post_field_data(self, field_name=None, a=None):
+    def post_field_data(self):
         if list(jql_data["issues"]) is not None:
             for d in list(jql_data["issues"]):
                 print("Matching, Issue key " + d["key"] + " to URL...")
@@ -277,31 +306,21 @@ class Field(IssueHistory):
                                         self.rebuild_issue_custom_field_values((j["field"], j["fieldId"],
                                                                                 j["fromString"], j["toString"],
                                                                                 j["to"]),
-                                                                               field_name=field_name, d=d)
+                                                                               d=d)
+
+        sys.exit(0)
 
     # base method for creating back custom field values
-    def rebuild_issue_custom_field_values(self, j=None, field_name=None, d=None):
+    def rebuild_issue_custom_field_values(self, j=None, d=None):
         v = CreateField()
         webURL = ("https://{}/rest/api/3/issue/{}".format(baseurl, d["key"]))
-        b = self.get_field(field_name=field_name)
+        b = self.get_field()
         # if the value of the field is 'None' (empty) we would like to post that as well.
         if j[3] == "":
             # we're now able to Post "None" data, works for single / cascading select list
             print("Hello select")
             if b.__getitem__(2) == v.multicheckboxes or \
                     b.__getitem__(2) == v.multiselect:
-                payload = \
-                    {
-                        "fields": {
-                            b.__getitem__(1):
-
-                                []
-
-                        }
-                    }
-                response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
-                psd(response=response, d=d, j=j)
-            elif b.__getitem__(2) == v.labels:
                 payload = \
                     {
                         "fields": {
@@ -339,21 +358,6 @@ class Field(IssueHistory):
                             b.__getitem__(1):
                             #  we need to be able to iterate through the field options and post it
                                 post_multi(j=j)
-
-                        }
-                }
-            response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
-            psd(response=response, d=d, j=j)
-        elif b.__getitem__(
-                2) == v.labels:
-            print("Hello labels")
-            payload = \
-                {
-                    "fields":
-                        {
-                            b.__getitem__(1): [
-                                j[3]
-                            ]
 
                         }
                 }
@@ -408,35 +412,11 @@ def psd(response=None, d=None, j=None):
         print("*" * 90)
 
 
-# function that iterates through our JQL
-def dkey(field_name=None):
-    if list(jql_data["issues"]) is not None:
-        for d in list(jql_data["issues"]):
-            print("Matching, Issue key " + d["key"] + " to URL...")
-            webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
-            data = requests.get(webURL, auth=auth_request, headers=headers)
-            fjson = json.loads(data.content)
-            if data.status_code != 200:
-                print("Error: Unable to access the Changelog History...\n", fjson, sep=",")
-            else:
-                if d["key"] is not None:
-                    for i in fjson["values"]:
-                        fetch = i["items"]
-                        if fetch is not None:
-                            for j in fetch:
-                                if j["field"] == field_name:
-                                    p = Field()
-                                    p.rebuild_issue_custom_field_values((j["field"], j["fieldId"],
-                                                                         j["fromString"], j["toString"],
-                                                                         j["to"]),
-                                                                        field_name=field_name, d=d)
-
-
 # function for self_rebuild fields
-def no_option(field_name=None):
+def no_option():
     user = Field()
     v = CreateField()
-    k = user.get_field(field_name=field_name).__getitem__(
+    k = user.get_field().__getitem__(
         2)
     if k == v.userpicker or \
             k == v.textfield or \
@@ -447,12 +427,19 @@ def no_option(field_name=None):
             k == v.textarea or \
             k == v.multigrouppicker or \
             k == v.multiuserpicker or \
-            k == v.grouppicker:
+            k == v.grouppicker or \
+            k == v.labels:
         print(f"{field_name} doesn't need options, rebuilding...")
         print(f"Rebuilding not required...OK")
         sys.exit(0)
+    elif k == v.multiselect or \
+            k == v.multicheckboxes or \
+            k == v.select or \
+            k == v.radiobuttons or \
+            k == v.cascadingselect:
+        user.get_field_option(g=user.get_field().__getitem__(3))
     else:
-        user.get_field_issue_history(field_name=field_name)
+        user.get_field_issue_history()
 
 
 # running get request for authentication and keep our session active
@@ -468,11 +455,19 @@ def jira_basic_auth():
     global email
     global token
     global baseurl
+    # TODO: consider using command line argument
+    # parser = argparse.ArgumentParser(prog='builder', description='Rebuild custom field', usage='%(prog)s [options]')
+    # parser.add_argument('-e', '--email', help='Email of your Atlassian Account')
+    # parser.add_argument('-t', '--token', help='API token to your Atlassian Account')
+    # parser.add_argument('-l', '--baseurl', help='Instance URL to Jira Cloud')
+    # parser.add_argument('-j', '--jql', help='JQL of your Search')
+    # args = parser.parse_args()
+
     email = input("Enter your Email Address: \n")
     validate(email=email)
     token = input("Enter your API Token: \n")
     validate(token=token)
-    baseurl = input("Enter your Instance Full URL: \n")
+    baseurl = input("Enter your Instance Full URL (e.g. nexusfive.atlassian.net): \n")
     validate(baseurl=baseurl)
     login(baseurl, email, token)
 
@@ -481,7 +476,7 @@ def jira_basic_auth():
 def login(baseurl, email, token):
     if email and token is not None:
         make_session(email, token)
-        webURL = ("https://" + baseurl + "/rest/api/3/search?jql=project%20in%20(T6,T5)&startAt=0&maxResults=1000")
+        webURL = ("https://" + baseurl + "/rest/api/3/search?jql=project%20in%20(T6)&startAt=0&maxResults=1000")
         data = requests.get(webURL, auth=auth_request, headers=headers)
         if data.status_code == 200:
             print("Login Successful...\n")
@@ -503,9 +498,9 @@ def validate(email=None, token=None, baseurl=None):
         print("Your Instance Name can't be empty...")
 
 
-def repeat(context=None, field_name=None, retries=None, trials=None):
+def repeat(context=None, retries=None, trials=None):
     check = Field()
-    while check.get_field(field_name).__getitem__(0) != field_name:
+    while check.get_field().__getitem__(0) != field_name:
         input(context)
         # give the viewer 2 chances to add a context before proceeding.
         retries -= 1
@@ -532,11 +527,11 @@ def post_multi(j=None):
         return c
 
 
-def context_check(field_name=None):
+def context_check():
     # TODO: check the context endpoint
     x = Field()
     webURL = ("https://{}/rest/api/3/field/{}/contexts".
-              format(baseurl, x.get_field(field_name=field_name).__getitem__(3)))
+              format(baseurl, x.get_field().__getitem__(3)))
     data = requests.get(webURL, auth=auth_request, headers=headers)
     rest = json.loads(data.content)
     if rest["values"] == "[]":
