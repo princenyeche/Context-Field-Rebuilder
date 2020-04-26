@@ -144,27 +144,19 @@ class IssueHistory:
         elif str(j[3]) == "":
             pass
         elif z == v.cascadingselect:
-            print(j[3])
+            # TODO: Ability to post to options, both fields needs to be split into a tuple
+            p = post_cassi(j=j)
+            print("Hello cf cassi")
             payload = (
                 {
                     "options": [
                         {
-                            "cascadingOptions": [],
-                            "value": j[3]
-                        },
-                        {
+                            "value": p.__getitem__(0),
                             "cascadingOptions": [
-                                "Child option"
-                            ],
-                            "value": j[3]
+                                p.__getitem__(1)
+                            ]
                         }
-                        # {
-                        #   "cascadingOptions": [
-                        #       "Sub-option",
-                        #        "Sub-option 2"
-                        #   ],
-                        #   "value": j[3]
-                        # }
+
                     ]
 
                 }
@@ -172,6 +164,7 @@ class IssueHistory:
             data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
             csd(data=data, j=j, d=d, field_name=field_name)
         else:
+            print("Hello cf normal")
             payload = (
                 {
                     "options": [
@@ -218,7 +211,7 @@ class Field(IssueHistory):
                     return c["name"], c["id"], c["schema"]["custom"], c["schema"]["customId"]
 
     @staticmethod
-    # a is returned as a tuple, we can use methods in tuple to fetch the required value, same as above.
+    # a is returned as a tuple, we think this method is unreliable, change it to extend the function.
     def get_field_types():
         # TODO: to find the type of field_type used, use this endpoint
         #  https://<your-instance>.atlassian.net/rest/api/3/field/search?type=custom
@@ -231,7 +224,7 @@ class Field(IssueHistory):
             if a["name"] == field_name:
                 return a["schema"]["custom"], a["schema"]["customId"], a["id"], a["name"]
 
-    # wrapping the field options in order to post to issue
+    # wrapping the field options in order to post the issue
     def get_field_option(self, g=None):
         global cm_dat
         v = CreateField()
@@ -366,16 +359,16 @@ class Field(IssueHistory):
         # TODO: below is used to post to cascading select field, we think the transmutation should work
         elif b.__getitem__(
                 2) == v.cascadingselect:
-            print("Hello cascade")
+            p = post_cassi(j=j)
             payload = \
                 {
                     "fields":
                         {
                             b.__getitem__(1):
                                 {
-                                    "value": str(j["toString"]["Parent Values"]),
+                                    "value": p.__getitem__(0),
                                     "child": {
-                                        "value": str(j["toString"]["Level 1 Values"])
+                                        "value": p.__getitem__(1)
                                     }
                                 }
 
@@ -540,3 +533,17 @@ def context_check():
         return True
     else:
         return False
+
+
+def post_cassi(j=None):
+    m = str(j[3])
+    f = str(j[3])
+    h = str(j[3])
+    if m.__len__() > 0:
+        k = f.split(")", maxsplit=5)
+        d = h.split(")", maxsplit=5)
+        z = k.__getitem__(0).split("(")
+        e = d.__getitem__(1).split("(")
+        b = z.__getitem__(0).split(":")
+        i = e.__getitem__(0).split(":")
+        return b.pop(0), i.pop(0)
