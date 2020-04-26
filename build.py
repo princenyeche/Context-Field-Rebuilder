@@ -58,6 +58,10 @@ def main():
         "*" * 3 + b.center(94) + "*" * 3 + "\n" +
         "*" * 100)
     jira_basic_auth()
+    print("*" * 90)
+    print("Let's Post the Option values to Jira Issue Fields \n"
+          "If you do not want to proceed, Press Ctrl + C to Terminate at any time")
+    print("*" * 90)
     c.sub_filter(q=field_name)
 
 
