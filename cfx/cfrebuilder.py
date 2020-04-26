@@ -82,7 +82,8 @@ class IssueHistory:
 
     # Issue History search, it finds out the values in the change log then extract and transform it.
     def get_field_issue_history(self):
-        print("We're gathering the Custom field options to Rebuild it.")
+        print("We're gathering the Custom field options to Rebuild it.\n"
+              "We'll let you know when we're done...")
         if list(jql_data["issues"]) is not None:
             for d in list(jql_data["issues"]):
                 # print("Matching, Issue key " + d["key"] + " to URL...") uncomment if you want to trail
@@ -101,7 +102,9 @@ class IssueHistory:
                                         self.create_back_cf_options((j["field"], j["fieldId"],
                                                                      j["fromString"], j["toString"], j["to"]),
                                                                     d=d)
-                                    # end of loop.
+
+        print("Custom field Options has been Added".upper())
+        # end of loop.
 
     # below method is to create back the options for the custom_field, since we can identify it
     @staticmethod
@@ -152,9 +155,9 @@ class IssueHistory:
                 {
                     "options": [
                         {
-                            "value": p.__getitem__(0),
+                            "value": p.__getitem__(1),
                             "cascadingOptions": [
-                                p.__getitem__(1)
+                                p.__getitem__(3)
                             ]
                         }
 
@@ -164,7 +167,7 @@ class IssueHistory:
             )
             data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
             csd(data=data, j=j, d=d, field_name=field_name)
-        else:
+        elif z == v.select or z == v.radiobuttons:
             payload = (
                 {
                     "options": [
@@ -281,10 +284,11 @@ class Field(IssueHistory):
 
     # if values exist, let's just post it instead.
     def post_field_data(self):
-        print("We're posting the option values to the Issues. This might take a while...")
+        print("We're posting the option values to the Issues. This might take a while... \n"
+              "A completion message will be shown, when we're done.")
         if list(jql_data["issues"]) is not None:
             for d in list(jql_data["issues"]):
-                print("Matching, Issue key " + d["key"] + " to URL...")
+                # print("Matching, Issue key " + d["key"] + " to URL...") uncomment if you want to trail
                 webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
                 data = requests.get(webURL, auth=auth_request, headers=headers)
                 fjson = json.loads(data.content)
@@ -302,6 +306,7 @@ class Field(IssueHistory):
                                                                                 j["to"]),
                                                                                d=d)
 
+        print("Custom Field Rebuilder Completed...".upper())
         sys.exit(0)
 
     # base method for creating back custom field values
@@ -325,7 +330,9 @@ class Field(IssueHistory):
                     }
                 response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
                 psd(response=response, d=d, j=j)
-            else:
+            elif b.__getitem__(2) == v.select or \
+                    b.__getitem__(2) == v.cascadingselect or \
+                    b.__getitem__(2) == v.radiobuttons:
                 payload = \
                     {
                         "fields": {
@@ -343,7 +350,6 @@ class Field(IssueHistory):
                 2) == v.multiselect or \
                 b.__getitem__(2) == v.multicheckboxes:
             # TODO: post method multi choice fields
-            print("hello multi")
             payload = \
                 {
                     "fields":
@@ -360,24 +366,43 @@ class Field(IssueHistory):
         elif b.__getitem__(
                 2) == v.cascadingselect:
             p = post_cassi(j=j)
-            payload = \
-                {
-                    "fields":
-                        {
-                            b.__getitem__(1):
-                                {
-                                    "value": p.__getitem__(0),
-                                    "child": {
-                                        "value": p.__getitem__(1)
+            if len(p) > 3:
+                payload = \
+                    {
+                        "fields":
+                            {
+                                b.__getitem__(1):
+                                    {
+                                        "value": p.__getitem__(1),
+                                        "child": {
+                                            "value": p.__getitem__(3)
+                                        }
                                     }
-                                }
 
-                        }
-                }
-            response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
-            psd(response=response, d=d, j=j)
+                            }
+                    }
+                response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
+                psd(response=response, d=d, j=j)
+            elif len(p) < 3:
+                payload = \
+                    {
+                        "fields":
+                            {
+                                b.__getitem__(1):
+                                    {
+                                        "value": p.__getitem__(1),
+                                        "child": {
+                                            "value": ""
+                                        }
+                                    }
+
+                            }
+                    }
+                response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
+                psd(response=response, d=d, j=j)
         # Posting single values for normal fields
-        else:
+        elif b.__getitem__(2) == v.radiobuttons or \
+                b.__getitem__(2) == v.select:
             payload = \
                 {
                     "fields":
@@ -391,6 +416,8 @@ class Field(IssueHistory):
                 }
             response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
             psd(response=response, d=d, j=j)
+        else:
+            print("Field type not supported...")
 
 
 # call to if-else function
@@ -550,6 +577,9 @@ def post_cassi(j=None):
         d = h.split(")", maxsplit=5)
         z = k.__getitem__(0).split("(")
         e = d.__getitem__(1).split("(")
+
         b = z.__getitem__(0).split(":")
         i = e.__getitem__(0).split(":")
-        return b.pop(1), i.pop(1)
+        vec = [b, i]
+        var = [val for elem in vec for val in elem]
+        return var
