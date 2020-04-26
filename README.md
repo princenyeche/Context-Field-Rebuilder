@@ -26,6 +26,12 @@ You can also install a virtual environment to run commands as well. you can inst
 
 In order to download, Requests run your PIP by using `$: pip install requests` or `$: sudo pip install requests` if on linux.
 
-Ensure you have the right permission on the Project before running the Script such as *BROWSE*, *CREATE* , *EDIT ISSUES* Permission & also Access to Jira Settings.
+Ensure you have the right permission on the Project before running the Script such as **BROWSE**, **CREATE** , **EDIT ISSUES Permission** & also Access to Jira Settings.
 
 Get an API Token from here https://id.atlassian.com/manage/api-tokens if you haven’t.
+
+
+# How to Use
+* Go to your Terminal
+* Run the script by using `$: python3 build.py` 
+* Construct a JQL for issues you would like rebuild. Please enter a valid JQL. example `project%20in%20(T6,T5)&startAt=0&maxResults=1000`, also make sure you enter the `maxResults=1000` parameter, so you have the full limit of 1K issue search, if not it will be limited to default `50`.
