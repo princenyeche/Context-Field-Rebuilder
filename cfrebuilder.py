@@ -535,6 +535,7 @@ def context_check():
         return False
 
 
+# function for cascading select list
 def post_cassi(j=None):
     m = str(j[3])
     f = str(j[3])
@@ -546,4 +547,4 @@ def post_cassi(j=None):
         e = d.__getitem__(1).split("(")
         b = z.__getitem__(0).split(":")
         i = e.__getitem__(0).split(":")
-        return b.pop(0), i.pop(0)
+        return b.pop(1), i.pop(1)
