@@ -51,7 +51,7 @@ class IssueHistory:
         print("Filtering Issue Keys, {} Issues returned...".format(str(jql_data["total"])))
         field_name = input("Enter the Name of the Custom Field: \n")
         # TODO: to properly find a way to validate all fields on the instance.
-        context = f"Make sure a context for \"{field_name}\" exist, by checking it " \
+        context = f"Make sure a context for \"{field_name}\" exist, by checking it \n" \
                   f"via the UI https://{baseurl}/secure/admin/ViewCustomFields.jspa " \
                   f"and Add a context, then press 'Enter' to continue.\n"
         input(context)
@@ -151,22 +151,37 @@ class IssueHistory:
         elif z == v.cascadingselect:
             # TODO: Ability to post to options, both fields needs to be split into a tuple
             p = post_cassi(j=j)
-            payload = (
-                {
-                    "options": [
-                        {
-                            "value": p.__getitem__(1),
-                            "cascadingOptions": [
-                                p.__getitem__(3)
-                            ]
-                        }
+            if len(p) > 3:
+                payload = (
+                    {
+                        "options": [
+                            {
+                                "value": p.__getitem__(1).lstrip(),
+                                "cascadingOptions": [p.__getitem__(3).lstrip()
+                                                     ]
+                            }
 
-                    ]
+                        ]
 
-                }
-            )
-            data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
-            csd(data=data, j=j, d=d, field_name=field_name)
+                    }
+                )
+                data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
+                csd(data=data, j=j, d=d, field_name=field_name)
+            elif len(p) < 3:
+                payload = (
+                    {
+                        "options": [
+                            {
+                                "value": p.__getitem__(1).lstrip(),
+                                "cascadingOptions": []
+                            }
+
+                        ]
+
+                    }
+                )
+                data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
+                csd(data=data, j=j, d=d, field_name=field_name)
         elif z == v.select or z == v.radiobuttons:
             payload = (
                 {
@@ -186,10 +201,13 @@ class IssueHistory:
 
 def csd(data=None, j=None, d=None, field_name=None):
     if data.status_code != 201:
-        print("Error: Unable to Post the Data to the Issue...".format(data.status_code))
+        pass
+        # print("Error: Unable to Post the Data to the Issue...".format(data.status_code))
     else:
-        print("Creating {} field option for {}".format(j[3], j[0]))
+        pass
+        # print("Creating {} field option for {}".format(j[3], j[0]))
         # end or exit post request
+        # uncomment if you want to see the post information.
 
 
 # sub_class to IssueHistory
@@ -367,22 +385,41 @@ class Field(IssueHistory):
                 2) == v.cascadingselect:
             p = post_cassi(j=j)
             if len(p) > 3:
-                payload = \
-                    {
-                        "fields":
-                            {
-                                b.__getitem__(1):
-                                    {
-                                        "value": p.__getitem__(1),
-                                        "child": {
-                                            "value": p.__getitem__(3)
+                if 'Level 1 values' not in p:
+                    payload = \
+                        {
+                            "fields":
+                                {
+                                    b.__getitem__(1):
+                                        {
+                                            # TODO: there might be a problem with single values
+                                            "value": p.__getitem__(1).lstrip()
+                                            # "child": {
+                                            #    "value": ""
+                                            # }
                                         }
-                                    }
 
-                            }
-                    }
-                response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
-                psd(response=response, d=d, j=j)
+                                }
+                        }
+                    response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
+                    psd(response=response, d=d, j=j)
+                elif 'Level 1 values' in p:
+                    payload = \
+                        {
+                            "fields":
+                                {
+                                    b.__getitem__(1):
+                                        {
+                                            "value": p.__getitem__(1).lstrip(),
+                                            "child": {
+                                                "value": p.__getitem__(3).lstrip()
+                                            }
+                                        }
+
+                                }
+                        }
+                    response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
+                    psd(response=response, d=d, j=j)
             elif len(p) < 3:
                 payload = \
                     {
@@ -390,10 +427,11 @@ class Field(IssueHistory):
                             {
                                 b.__getitem__(1):
                                     {
-                                        "value": p.__getitem__(1),
-                                        "child": {
-                                            "value": ""
-                                        }
+                                        # TODO: there might be a problem with single values
+                                        "value": p.__getitem__(1).lstrip()
+                                        # "child": {
+                                        #    "value": ""
+                                        # }
                                     }
 
                             }
@@ -423,12 +461,15 @@ class Field(IssueHistory):
 # call to if-else function
 def psd(response=None, d=None, j=None):
     if response.status_code != 204:
-        print("Error: Unable to Post {} Data to the Issue to {} with Status: {} \n"
-              .format(j[3], d["key"], response.status_code))
-        print("*" * 90)
+        pass
+        # print("Error: Unable to Post {} Data to the Issue to {} with Status: {} \n"
+        #      .format(j[3], d["key"], response.status_code))
+        # print("*" * 90)
     else:
-        print("Custom field Option {} Added to Issue {}".format(j[3], d["key"]))
-        print("*" * 90)
+        pass
+        # print("Custom field Option {} Added to Issue {}".format(j[3], d["key"]))
+        # print("*" * 90)
+        # uncomment if you want to see the post information.
 
 
 # function for self_rebuild fields
