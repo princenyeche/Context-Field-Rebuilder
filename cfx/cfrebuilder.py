@@ -103,6 +103,7 @@ class IssueHistory:
                                                                      j["fromString"], j["toString"], j["to"]),
                                                                     d=d)
 
+        print("*" * 90)
         print("Custom field Options has been Added".upper())
         # end of loop.
 
@@ -122,7 +123,6 @@ class IssueHistory:
         z = x.get_field().__getitem__(
             2)
         # handling multiple option values to re-create back it's option.
-        print("*" * 90)
         webURL = ("https://{}/rest/api/3/customField/{}/option".format(baseurl, seq3))
         # create option for multi_select or multi_checkboxes field
         if z == v.multiselect or \
@@ -149,7 +149,7 @@ class IssueHistory:
         elif str(j[3]) == "":
             pass
         elif z == v.cascadingselect:
-            # TODO: Ability to post to options, both fields needs to be split into a tuple
+            # Ability to post to options, both fields needs to be split into a tuple
             p = post_cassi(j=j)
             if len(p) > 3:
                 payload = (
@@ -167,7 +167,7 @@ class IssueHistory:
                 )
                 data = requests.post(webURL, auth=auth_request, json=payload, headers=headers)
                 csd(data=data, j=j, d=d, field_name=field_name)
-            elif len(p) < 3:
+            elif len(p) <= 3:
                 payload = (
                     {
                         "options": [
@@ -265,7 +265,12 @@ class Field(IssueHistory):
                 k == v.multigrouppicker or \
                 k == v.multiuserpicker or \
                 k == v.grouppicker or \
-                k == v.labels:
+                k == v.labels or \
+                k == v.project or \
+                k == v.multiversion or \
+                k == v.version or \
+                k == v.readonlyfield or \
+                k == v.importid:
             print(f"{field_name} doesn't need options, this field self rebuilds")
             print(f"Rebuilding not required...OK")
             sys.exit(0)
@@ -363,11 +368,11 @@ class Field(IssueHistory):
                 response = requests.put(webURL, json=payload, auth=auth_request, headers=headers)
                 psd(response=response, d=d, j=j)
                 # posting values for multi-checkbox / multi select fields
-        # TODO: Be able to post values for multiple choice fields (Multi_checkboxes, Multi_select)
+        #  post values for multiple choice fields (Multi_checkboxes, Multi_select)
         elif b.__getitem__(
                 2) == v.multiselect or \
                 b.__getitem__(2) == v.multicheckboxes:
-            # TODO: post method multi choice fields
+            # post method multi choice fields
             payload = \
                 {
                     "fields":
@@ -380,54 +385,35 @@ class Field(IssueHistory):
                 }
             response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
             psd(response=response, d=d, j=j)
-        # TODO: below is used to post to cascading select field
+        # below is used to post to cascading select field
         elif b.__getitem__(
                 2) == v.cascadingselect:
             p = post_cassi(j=j)
             if len(p) > 3:
-                if 'Level 1 values' not in p:
-                    payload = \
-                        {
-                            "fields":
-                                {
-                                    b.__getitem__(1):
-                                        {
-                                            # TODO: there might be a problem with single values
-                                            "value": p.__getitem__(1).lstrip()
-                                            # "child": {
-                                            #    "value": ""
-                                            # }
-                                        }
-
-                                }
-                        }
-                    response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
-                    psd(response=response, d=d, j=j)
-                elif 'Level 1 values' in p:
-                    payload = \
-                        {
-                            "fields":
-                                {
-                                    b.__getitem__(1):
-                                        {
-                                            "value": p.__getitem__(1).lstrip(),
-                                            "child": {
-                                                "value": p.__getitem__(3).lstrip()
-                                            }
-                                        }
-
-                                }
-                        }
-                    response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
-                    psd(response=response, d=d, j=j)
-            elif len(p) < 3:
                 payload = \
                     {
                         "fields":
                             {
                                 b.__getitem__(1):
                                     {
-                                        # TODO: there might be a problem with single values
+                                        "value": p.__getitem__(1).lstrip(),
+                                        "child": {
+                                            "value": p.__getitem__(3).lstrip()
+                                        }
+                                    }
+
+                            }
+                    }
+                response = requests.put(webURL, auth=auth_request, json=payload, headers=headers)
+                psd(response=response, d=d, j=j)
+            elif len(p) <= 3:
+                payload = \
+                    {
+                        "fields":
+                            {
+                                b.__getitem__(1):
+                                    {
+                                        # post  single values of cascading fields
                                         "value": p.__getitem__(1).lstrip()
                                         # "child": {
                                         #    "value": ""
@@ -488,7 +474,12 @@ def no_option():
             k == v.multigrouppicker or \
             k == v.multiuserpicker or \
             k == v.grouppicker or \
-            k == v.labels:
+            k == v.labels or \
+            k == v.project or \
+            k == v.multiversion or \
+            k == v.version or \
+            k == v.readonlyfield or \
+            k == v.importid:
         print(f"{field_name} doesn't need options, rebuilding...")
         print(f"Rebuilding not required...OK")
         sys.exit(0)
@@ -548,6 +539,9 @@ def login(baseurl, email, token):
         else:
             sys.stderr.write("Authentication Failed...\n")
             sys.exit(1)
+    else:
+        sys.stderr.write("We cannot login with No values...\n")
+        sys.exit(1)
 
 
 # simply validate login details
