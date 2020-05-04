@@ -1,0 +1,11 @@
+version - 0.2 [Initial version of scripts]
+          [known problems]
+          [1] [Select Cascading list field, can't append 
+               one values to options method]
+          [2] [Fields without Global context can't be
+               used]
+          [3] [Issue limit is now 100 issues and the
+              startAt parameter doesn't work]
+          [4] [It seems special characters can't be posted]
+          
+version - 0.5 [Improvements to the above]
