@@ -6,6 +6,10 @@ version - 0.2 [Initial version of scripts]
                used]
           [3] [Issue limit is now 100 issues and the
               startAt parameter doesn't work]
-          [4] [It seems special characters can't be posted]
+          [4] [It seems special characters can't be posted] - [Yet to be validated]
           
-version - 0.5 [Improvements to the above]
+version - 0.4 [Improvements to the above]
+          [known problems]
+          [1] [Select Cascading list field, can't append 
+               one values to options method]
+          [4] [It seems special characters can't be posted] - [Yet to be validated]
