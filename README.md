@@ -35,4 +35,4 @@ Get an API Token from here https://id.atlassian.com/manage/api-tokens if you hav
 * Just enter the project key, you would like rebuild. Please enter a valid Project key. example `NB` For multiple projects, please separate by comma. e.g `NB, NGT, TIS`.
 
 # See License
-* LICENSE.txt
+* LICENSE
