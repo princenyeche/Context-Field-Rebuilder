@@ -4,7 +4,7 @@
 Script   : Context Field Rebuilder for Custom field
 Author   : Prince Nyeche
 Platform : Atlassian Jira Cloud
-Version  : 0.2
+Version  : 0.4
 **************************************************************************
 Required libraries : requests
 Download URL       : http://python-requests.org
@@ -19,12 +19,12 @@ from requests.auth import HTTPBasicAuth
 import sys
 from cfx.cfcreate import CreateField
 
-__version__ = '0.2'
+__version__ = '0.4'
 __author__ = 'Prince Nyeche'
 email = None
 token = None
 baseurl = ""
-jql = ""
+pkey = ""
 auth_request = None
 headers = None
 jql_data = None
@@ -50,13 +50,11 @@ class IssueHistory:
         i = CreateField()
         print("Filtering Issue Keys, {} Issues returned...".format(str(jql_data["total"])))
         field_name = input("Enter the Name of the Custom Field: \n")
-        # TODO: to properly find a way to validate all fields on the instance.
-        context = f"Make sure a context for \"{field_name}\" exist, by checking it \n" \
-                  f"via the UI https://{baseurl}/secure/admin/ViewCustomFields.jspa " \
-                  f"and Add a context, then press 'Enter' to continue.\n"
-        input(context)
-        a = x.get_field()
+        # to properly find a way to validate all fields on the instance.
+        print("Searching...")
+        a = x.get_field_types()
         if a is not None:
+            print(f"Found field: \"{field_name}\" Searching option...")
             self.sub_filter(q=field_name)
         elif a is None:
             print(f"\"{field_name}\" seems like it doesn't exist, do you want to Create it? Please check in the"
@@ -67,15 +65,16 @@ class IssueHistory:
     def sub_filter(q, retries=3, trials="Try Again!"):
         field_name = q
         x = Field()
-        if x.get_field().__getitem__(0) == field_name:
+        a = x.get_field()
+        if a is not None:
             # a = check.get_field_types(field_name=field_name).__getitem__(0)
-            a = x.get_field().__getitem__(3)
-            x.get_field_option(g=a)
-        elif x.get_field().__getitem__(0) != field_name:
+            r = a.__getitem__(3)
+            x.get_field_option(g=r)
+        elif x.get_field() is None:
             context = f"A Context doesn't exist on {field_name}, we'll build it now, please add a context via the UI" \
                       " then press 'Enter' \n"
             repeat(context=context, retries=retries, trials=trials)
-            # TODO: Certain field types doesn't support customField option endpoint. check `build.py`
+            # Certain field types doesn't support customField option endpoint. check `build.py` or `below`
             #  for a list of fields. so no need to rebuild that, let's only check if it has context
             no_option()
         # end of if block
@@ -85,23 +84,38 @@ class IssueHistory:
         print("We're gathering the Custom field options to Rebuild it.\n"
               "We'll let you know when we're done...")
         if list(jql_data["issues"]) is not None:
-            for d in list(jql_data["issues"]):
-                # print("Matching, Issue key " + d["key"] + " to URL...") uncomment if you want to trail
-                webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
-                data = requests.get(webURL, auth=auth_request, headers=headers)
-                fjson = json.loads(data.content)
-                if data.status_code != 200:
-                    print("Error: Unable to access the Changelog History...\n", fjson, sep=",")
-                else:
-                    if d["key"] is not None:
-                        for i in fjson["values"]:
-                            fetch = i["items"]
-                            if fetch is not None:
-                                for j in fetch:
-                                    if j["field"] == field_name:
-                                        self.create_back_cf_options((j["field"], j["fieldId"],
-                                                                     j["fromString"], j["toString"], j["to"]),
-                                                                    d=d)
+            total = jql_data["total"]
+            maxResults = 1
+            startAt = 0
+            fullNumber = int(total / maxResults)
+            while total > maxResults:
+                if startAt < fullNumber:
+                    webEx = ("https://{}/rest/api/3/search?jql=project%20in%20({})&startAt={}&maxResults={}"
+                             .format(baseurl, pkey, startAt, maxResults))
+                    info = requests.get(webEx, auth=auth_request, headers=headers)
+                    wjson = json.loads(info.content)
+                    for d in list(wjson["issues"]):
+                        # print("Matching, Issue key " + d["key"] + " to URL...") uncomment if you want to trail
+                        webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
+                        data = requests.get(webURL, auth=auth_request, headers=headers)
+                        fjson = json.loads(data.content)
+                        if data.status_code != 200:
+                            print("Error: Unable to access the Changelog History...\n", fjson, sep=",")
+                        else:
+                            if d["key"] is not None:
+                                for i in fjson["values"]:
+                                    fetch = i["items"]
+                                    if fetch is not None:
+                                        for j in fetch:
+                                            if j["field"] == field_name:
+                                                self.create_back_cf_options((j["field"], j["fieldId"],
+                                                                             j["fromString"], j["toString"],
+                                                                             j["to"]),
+                                                                            d=d)
+                startAt += 1
+                if startAt > (fullNumber - 1):
+                    ...
+                    break
 
         print("*" * 90)
         print("Custom field Options has been Added".upper())
@@ -237,13 +251,30 @@ class Field(IssueHistory):
         # TODO: to find the type of field_type used, use this endpoint
         #  https://<your-instance>.atlassian.net/rest/api/3/field/search?type=custom
         #  values accepted "custom". not reliable, since the default page returned is only 50.
+        #  however, we're able to run a loop of each option, page by page.
         webURL = ("https://{}/rest/api/3/field/search?type=custom"
                   .format(baseurl))
         data = requests.get(webURL, auth=auth_request, headers=headers)
         pjson = json.loads(data.content)
-        for a in pjson["values"]:
-            if a["name"] == field_name:
-                return a["schema"]["custom"], a["schema"]["customId"], a["id"], a["name"]
+        total = pjson["total"]
+        maxResults = 1
+        startAt = 0
+        fullNumber = int(total / maxResults)
+        while total > maxResults:
+            if startAt < fullNumber:
+                webEx = ("https://{}/rest/api/3/field/search?type=custom&startAt={}&maxResults={}"
+                         .format(baseurl, startAt, maxResults))
+                info = requests.get(webEx, auth=auth_request, headers=headers)
+                wjson = json.loads(info.content)
+                for a in wjson["values"]:
+                    if a["name"] == field_name:
+                        return a["schema"]["custom"], a["schema"]["customId"], a["id"], a["name"]
+
+            startAt += 1
+            if startAt > (fullNumber - 1):
+                break
+
+            # TODO: adding an else statement defaults to nothing, finding the field if it exists.
 
     # wrapping the field options in order to post the issue
     def get_field_option(self, g=None):
@@ -278,15 +309,20 @@ class Field(IssueHistory):
             self.get_field_value(cm_dat=cm_dat)
 
     def get_field_value(self, cm_dat=None):
-        if str(cm_dat["values"]) == "[]":
-            print(f"The Context for {field_name} has no values, defaulting to build options...")
-            self.get_field_issue_history()
-        else:
-            print(f"{field_name} has values posting to issue...")
-            for a in cm_dat["values"]:
-                if a["value"] is not None:
-                    pass
-            self.post_field_data()
+        if "self" in str(cm_dat):
+            if str(cm_dat["values"]) == "[]":
+                print(f"The Context for {field_name} has no values, defaulting to build options...")
+                self.get_field_issue_history()
+            else:
+                print(f"{field_name} has values posting to issue...")
+                for a in cm_dat["values"]:
+                    if a["value"] is not None:
+                        pass
+                self.post_field_data()
+        elif "errorMessages" in str(cm_dat):
+            print(f"Either Global Context for {field_name} doesn't exist, or \n"
+                  f"you do not have permission on it.Please check via the UI")
+            sys.exit(1)
 
     @staticmethod
     # TODO: check if values has been posted before
@@ -310,24 +346,46 @@ class Field(IssueHistory):
         print("We're posting the option values to the Issues. This might take a while... \n"
               "A completion message will be shown, when we're done.")
         if list(jql_data["issues"]) is not None:
-            for d in list(jql_data["issues"]):
-                # print("Matching, Issue key " + d["key"] + " to URL...") uncomment if you want to trail
-                webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
-                data = requests.get(webURL, auth=auth_request, headers=headers)
-                fjson = json.loads(data.content)
-                if data.status_code != 200:
-                    print("Error: Unable to access the Changelog History...\n", fjson, sep=",")
-                else:
-                    if d["key"] is not None:
-                        for i in fjson["values"]:
-                            fetch = i["items"]
-                            if fetch is not None:
-                                for j in fetch:
-                                    if j["field"] == field_name:
-                                        self.rebuild_issue_custom_field_values((j["field"], j["fieldId"],
-                                                                                j["fromString"], j["toString"],
-                                                                                j["to"]),
-                                                                               d=d)
+            total = jql_data["total"]
+            maxResults = 1
+            startAt = 0
+            fullNumber = int(total / maxResults)
+            print("This is the number: {}, max: {}, total: {}, start: {}"
+                  .format(fullNumber, maxResults, total, startAt))
+            # TODO: Provide an option to select between CSV file or not
+            # with open("jql.csv", "r") as csvFile:
+            # reader = csv.reader(csvFile, delimiter='\t')
+            # next(reader, None)
+            while maxResults < total:
+                if startAt < fullNumber:
+                    webEx = ("https://{}/rest/api/3/search?jql=project%20in%20({})&startAt={}&maxResults={}"
+                             .format(baseurl, pkey, startAt, maxResults))
+                    info = requests.get(webEx, auth=auth_request, headers=headers)
+                    wjson = json.loads(info.content)
+                    for d in list(wjson["issues"]):
+                        print("Matching, Issue key " + d["key"] + " to URL...")  # uncomment if you want to trail
+                        webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
+                        data = requests.get(webURL, auth=auth_request, headers=headers)
+                        fjson = json.loads(data.content)
+                        if data.status_code != 200:
+                            print("Error: Unable to access the Changelog History...\n", fjson, sep=",")
+                        else:
+                            if d["key"] is not None:
+                                for i in fjson["values"]:
+                                    fetch = i["items"]
+                                    if fetch is not None:
+                                        for j in fetch:
+                                            if j["field"] == field_name:
+                                                self.rebuild_issue_custom_field_values((j["field"], j["fieldId"],
+                                                                                        j["fromString"], j["toString"],
+                                                                                        j["to"]),
+                                                                                       d=d)
+
+                startAt += 1
+                if startAt > (fullNumber - 1):
+                    print("Total number of Issues fixed: {}, Max Loop/Issue: {},  Page: {} of {}"
+                          .format(total, maxResults, startAt, fullNumber))
+                    break
 
         print("Custom Field Rebuilder Completed...".upper())
         sys.exit(0)
@@ -447,13 +505,11 @@ class Field(IssueHistory):
 # call to if-else function
 def psd(response=None, d=None, j=None):
     if response.status_code != 204:
-        pass
-        # print("Error: Unable to Post {} Data to the Issue to {} with Status: {} \n"
-        #      .format(j[3], d["key"], response.status_code))
+        print("Error: Unable to Post \"{}\" Data to the Issue to {} with Status: {} \n"
+              .format(j[3], d["key"], response.status_code))
         # print("*" * 90)
     else:
-        pass
-        # print("Custom field Option {} Added to Issue {}".format(j[3], d["key"]))
+        print("Custom field Option \"{}\" Added to Issue {}".format(j[3], d["key"]))
         # print("*" * 90)
         # uncomment if you want to see the post information.
 
@@ -506,13 +562,13 @@ def jira_basic_auth():
     global email
     global token
     global baseurl
-    global jql
+    global pkey
     # TODO: consider using command line argument
     # parser = argparse.ArgumentParser(prog='builder', description='Rebuild custom field', usage='%(prog)s [options]')
     # parser.add_argument('-e', '--email', help='Email of your Atlassian Account')
     # parser.add_argument('-t', '--token', help='API token to your Atlassian Account')
     # parser.add_argument('-l', '--baseurl', help='Instance URL to Jira Cloud')
-    # parser.add_argument('-j', '--jql', help='JQL of your Search')
+    # parser.add_argument('-p', '--pkey', help='Project key of your Project')
     # args = parser.parse_args()
 
     email = input("Enter your Email Address: \n")
@@ -521,8 +577,8 @@ def jira_basic_auth():
     validate(token=token)
     baseurl = input("Enter your Instance Full URL (e.g. nexusfive.atlassian.net): \n")
     validate(baseurl=baseurl)
-    jql = input("Enter your JQL Query (e.g. project%20in%20(T6,T5)&startAt=0&maxResults=1000 ): \n")
-    validate(jql=jql)
+    pkey = input("Enter your Project Key (e.g. for Multiple Projects separate by comma e.g NB, GT ): \n")
+    validate(pkey=pkey)
     login(baseurl, email, token)
 
 
@@ -530,7 +586,8 @@ def jira_basic_auth():
 def login(baseurl, email, token):
     if email and token is not None:
         make_session(email, token)
-        webURL = ("https://" + baseurl + "/rest/api/3/search?jql=" + jql)
+        webURL = ("https://{}/rest/api/3/search?jql=project%20in%20({})&startAt=0&maxResults=100"
+                  .format(baseurl, pkey))
         data = requests.get(webURL, auth=auth_request, headers=headers)
         if data.status_code == 200:
             print("Login Successful...\n")
@@ -545,7 +602,7 @@ def login(baseurl, email, token):
 
 
 # simply validate login details
-def validate(email=None, token=None, baseurl=None, jql=None):
+def validate(email=None, token=None, baseurl=None, pkey=None):
     # p1 = re.compile('[A-Za-z0-9._%+-+@[A-Za-z0-9.-]+.\[A-Za-z]{3,4}')
     if email == "":
         print("Email Address can't be empty")
@@ -553,20 +610,21 @@ def validate(email=None, token=None, baseurl=None, jql=None):
         print("Your token can't be empty")
     elif baseurl == "":
         print("Your Instance Name can't be empty...")
-    elif jql == "":
-        print("Your JQL can't be empty.")
+    elif pkey == "":
+        print("Your Project key can't be empty.")
 
 
 # might not be used in this context, we'll leave it here
 def repeat(context=None, retries=None, trials=None):
-    check = Field()
-    while check.get_field().__getitem__(0) != field_name:
+    t = Field()
+    while t.get_field() is None:
         input(context)
-        # give the viewer 2 chances to add a context before proceeding.
+        # give the viewer 3 chances to add a context before proceeding.
         retries -= 1
         if retries < 0:
             sys.stderr.write("It seems you do not want to add a context on \"{}\" field"
                              .format(field_name))
+            sys.exit(1)
         print(trials)
 
 
