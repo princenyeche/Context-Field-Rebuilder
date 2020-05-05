@@ -31,6 +31,5 @@ Get an API Token from here https://id.atlassian.com/manage/api-tokens if you hav
 
 # How to Use
 * Go to your Terminal
-* Run the script by using `$: python3 build.py` 
-* Construct a JQL for issues you would like rebuild. Please enter a valid JQL. 
-example `project%20in%20(T6,T5)&startAt=0&maxResults=1000`, also make sure you enter the `maxResults=1000` parameter, so you have the full limit of 1K issue search, if not it will be limited to default `50`.
+* Run the script by using `$: python3 build.py` or `$: python build.py` if your machine is already on python 3.
+* Just enter the project key, you would like rebuild. Please enter a valid Project key. example `NB` For multiple projects, please separate by comma. e.g `NB, NGT, TIS`.
