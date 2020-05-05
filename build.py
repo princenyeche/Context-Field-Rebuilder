@@ -4,7 +4,7 @@
 Script   : Context Field Rebuilder for Custom field
 Author   : Prince Nyeche
 Platform : Atlassian Jira Cloud
-Version  : 0.2
+Version  : 0.4
 Function : Script helps to build back deleted custom field context.
 **************************************************************************
 Required libraries : requests
@@ -27,7 +27,7 @@ Supported Custom fields & Features
 5. multicheckboxes - COMPLETE
 
 ** Script can search Multiple Projects
-** Limited to 1K Issues per runtime.
+** No Limit to Issues per runtime.
 
 __________________________________________________________________________
 All Fields Supported :[url, userpicker (single user), select, textfield, labels, 
@@ -68,4 +68,3 @@ def main():
 # Main Program Initialization here
 if __name__ == "__main__":
     main()
-
