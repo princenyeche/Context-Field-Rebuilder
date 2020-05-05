@@ -1,5 +1,5 @@
 # Context Field Rebuilder
-The below script is written in python and helps to rebuild deleted context options of custom fields and insert the correct values back to the Issue Key on Jira Cloud
+The below script is written in python and helps to rebuild deleted context options of custom fields and insert the correct values back to the Issue Key on Jira Cloud for this problem here on ["JRACLOUD-27957"](https://jira.atlassian.com/browse/JRACLOUD-27957)
 
 ## Supported Fields
 * Multiselect 
