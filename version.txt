@@ -8,7 +8,7 @@ version - 0.2 [Initial version of scripts]
               startAt parameter doesn't work]
           [4] [It seems special characters can't be posted] - [Yet to be validated]
           
-version - 0.4 [Improvements to the above]
+version - 0.4 [Improvements to the above] - 6 May 2020
           [known problems]
           [1] [Select Cascading list field, can't append 
                one values to options method]
