@@ -57,8 +57,8 @@ class IssueHistory:
             print(f"Found field: \"{field_name}\" Searching option...")
             self.sub_filter(q=field_name)
         elif a is None:
-            print(f"\"{field_name}\" seems like it doesn't exist, do you want to Create it? Please check in the"
-                  f" UI before proceeding. if unsure!?")
+            print(f"\"{field_name}\" seems like it doesn't exist, do you want to Create it? "
+                  f"Please check in the UI before proceeding. if unsure!?")
             i.create_cf(field_name=field_name, baseurl=baseurl, auth_request=auth_request, headers=headers)
 
     @staticmethod
@@ -71,7 +71,9 @@ class IssueHistory:
             r = a.__getitem__(3)
             x.get_field_option(g=r)
         elif x.get_field() is None:
-            context = f"A Context doesn't exist on {field_name}, we'll build it now, please add a context via the UI" \
+            context = f"A Context doesn't exist on {field_name}, we'll build it now, \n" \
+                      f"please add a context via the UI " \
+                      f"https://{baseurl}/secure/admin/ViewCustomFields.jspa" \
                       " then press 'Enter' \n"
             repeat(context=context, retries=retries, trials=trials)
             # Certain field types doesn't support customField option endpoint. check `build.py` or `below`
@@ -350,8 +352,8 @@ class Field(IssueHistory):
             maxResults = 1
             startAt = 0
             fullNumber = int(total / maxResults)
-            print("This is the number: {}, max: {}, total: {}, start: {}"
-                  .format(fullNumber, maxResults, total, startAt))
+            # print("This is the number: {}, max: {}, total: {}, start: {}"
+            # .format(fullNumber, maxResults, total, startAt))
             # TODO: Provide an option to select between CSV file or not
             # with open("jql.csv", "r") as csvFile:
             # reader = csv.reader(csvFile, delimiter='\t')

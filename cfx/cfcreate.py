@@ -14,6 +14,7 @@ API Token can be generated from https://id.atlassian.com/manage/api-tokens
 **************************************************************************
 """
 import requests
+import sys
 """
 Usage (field_type) <left> : <right>(searcher_key)
 _______________________________________________
@@ -130,6 +131,8 @@ class CreateField:
         if response.status_code != 201:
             print("Error: Unable to Create \"{}\" Custom Field...{}".format(field_name, response.status_code))
             print("*" * 90)
+            sys.exit(0)
         else:
             print("Custom field \"{}\" created...".format(field_name))
             print("*" * 90)
+            sys.exit(0)
