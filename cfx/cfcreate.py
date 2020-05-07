@@ -131,7 +131,7 @@ class CreateField:
         if response.status_code != 201:
             print("Error: Unable to Create \"{}\" Custom Field...{}".format(field_name, response.status_code))
             print("*" * 90)
-            sys.exit(0)
+            sys.exit(1)
         else:
             print("Custom field \"{}\" created...".format(field_name))
             print("*" * 90)
