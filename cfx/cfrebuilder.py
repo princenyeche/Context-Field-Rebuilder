@@ -54,7 +54,7 @@ class IssueHistory:
         print("Searching...")
         a = x.get_field_types()
         if a is not None:
-            print(f"Found field: \"{field_name}\" Searching option...")
+            print(f"Found field: \"{field_name}\", Searching option...")
             self.sub_filter(q=field_name)
         elif a is None:
             print(f"\"{field_name}\" seems like it doesn't exist, do you want to Create it? "
@@ -87,10 +87,10 @@ class IssueHistory:
               "We'll let you know when we're done...")
         if list(jql_data["issues"]) is not None:
             total = jql_data["total"]
-            maxResults = 1
+            maxResults = 50
             startAt = 0
-            fullNumber = int(total / maxResults)
-            while total > maxResults:
+            fullNumber = int(total / 1)
+            while total > maxResults or total < maxResults:
                 if startAt < fullNumber:
                     webEx = ("https://{}/rest/api/3/search?jql=project%20in%20({})&startAt={}&maxResults={}"
                              .format(baseurl, pkey, startAt, maxResults))
@@ -114,7 +114,7 @@ class IssueHistory:
                                                                              j["fromString"], j["toString"],
                                                                              j["to"]),
                                                                             d=d)
-                startAt += 1
+                startAt += 50
                 if startAt > (fullNumber - 1):
                     ...
                     break
@@ -172,6 +172,7 @@ class IssueHistory:
                     {
                         "options": [
                             {
+                                # TODO: work on getting the cascading select list to post multiple values
                                 "value": p.__getitem__(1).lstrip(),
                                 "cascadingOptions": [p.__getitem__(3).lstrip()
                                                      ]
@@ -191,7 +192,7 @@ class IssueHistory:
                                 "value": p.__getitem__(1).lstrip(),
                                 "cascadingOptions": []
                             }
-
+                            # TODO: Post other options of  the Cascading fields
                         ]
 
                     }
@@ -250,19 +251,19 @@ class Field(IssueHistory):
     @staticmethod
     # a is returned as a tuple, we think this method is unreliable, change it to extend the function.
     def get_field_types():
-        # TODO: to find the type of field_type used, use this endpoint
+        #  To find the type of field_type used, use this endpoint
         #  https://<your-instance>.atlassian.net/rest/api/3/field/search?type=custom
-        #  values accepted "custom". not reliable, since the default page returned is only 50.
+        #  values accepted "custom". the default result returned is only 50.
         #  however, we're able to run a loop of each option, page by page.
         webURL = ("https://{}/rest/api/3/field/search?type=custom"
                   .format(baseurl))
         data = requests.get(webURL, auth=auth_request, headers=headers)
         pjson = json.loads(data.content)
         total = pjson["total"]
-        maxResults = 1
+        maxResults = 50
         startAt = 0
-        fullNumber = int(total / maxResults)
-        while total > maxResults:
+        fullNumber = int(total / 1)
+        while total > maxResults or total < maxResults:
             if startAt < fullNumber:
                 webEx = ("https://{}/rest/api/3/field/search?type=custom&startAt={}&maxResults={}"
                          .format(baseurl, startAt, maxResults))
@@ -272,11 +273,9 @@ class Field(IssueHistory):
                     if a["name"] == field_name:
                         return a["schema"]["custom"], a["schema"]["customId"], a["id"], a["name"]
 
-            startAt += 1
+            startAt += 50
             if startAt > (fullNumber - 1):
                 break
-
-            # TODO: adding an else statement defaults to nothing, finding the field if it exists.
 
     # wrapping the field options in order to post the issue
     def get_field_option(self, g=None):
@@ -349,9 +348,9 @@ class Field(IssueHistory):
               "A completion message will be shown, when we're done.")
         if list(jql_data["issues"]) is not None:
             total = jql_data["total"]
-            maxResults = 1
+            maxResults = 50
             startAt = 0
-            fullNumber = int(total / maxResults)
+            fullNumber = int(total / 1)
             # print("This is the number: {}, max: {}, total: {}, start: {}"
             # .format(fullNumber, maxResults, total, startAt))
             # TODO: Provide an option to select between CSV file or not
@@ -383,7 +382,7 @@ class Field(IssueHistory):
                                                                                         j["to"]),
                                                                                        d=d)
 
-                startAt += 1
+                startAt += 50
                 if startAt > (fullNumber - 1):
                     print("Total number of Issues fixed: {}, Max Loop/Issue: {},  Page: {} of {}"
                           .format(total, maxResults, startAt, fullNumber))
@@ -632,7 +631,6 @@ def repeat(context=None, retries=None, trials=None):
 
 # Posting multi_choice fields
 def post_multi(j=None):
-    # TODO: post function multi choice fields
     m = str(j[3])
     f = "value"
     c = []
