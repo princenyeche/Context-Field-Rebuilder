@@ -17,7 +17,7 @@ The below script is written in python and helps to rebuild deleted context optio
 # Read Me
 Make sure Python is installed! Goto https://www.python.org/downloads/ any version from v3.x will do. You will also need to ensure you have PIP on your computer with the download. check by using `$: pip --version`
 
-If you installed Python from source, with an installer from python.org, or via Homebrew you should already have pip. If you’re on Linux and installed using your OS package manager, you may have to install pip separately.
+If you installed Python from source, with an installer from python.org, or via [Homebrew](https://brew.sh/) you should already have pip. If you’re on Linux and installed using your OS package manager, you may have to [install pip](https://pip.pypa.io/en/stable/installing/) separately.
 
 > Required Package → Requests can be gotten from http://python-requests.org
 > You can also install a virtual environment to run commands as well. you can install as `$: pip install virtualenv` on  terminal (for MacOs users → use this guide on Pipenv ).To activate the virtual environment, use `$: source <location where venv is>/bin/activate` 
