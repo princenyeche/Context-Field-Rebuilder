@@ -357,7 +357,7 @@ class Field(IssueHistory):
             # with open("jql.csv", "r") as csvFile:
             # reader = csv.reader(csvFile, delimiter='\t')
             # next(reader, None)
-            while maxResults < total:
+            while maxResults < total or maxResults > total:
                 if startAt < fullNumber:
                     webEx = ("https://{}/rest/api/3/search?jql=project%20in%20({})&startAt={}&maxResults={}"
                              .format(baseurl, pkey, startAt, maxResults))
