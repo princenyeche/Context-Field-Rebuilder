@@ -28,6 +28,10 @@ Ensure you have the right permission on the Project before running the Script su
 
 Get an API Token from here https://id.atlassian.com/manage/api-tokens if you haven’t.
 
+# Scale
+> This Script is useful when you want to scan and check for little projects. If the issue number is large > 5K Issues, we suggest you reach out to "**Atlassian Support**" to help provide other faster methods such as "**Restore Instance**". However, if you have the patience to wait, the Script is more than capable of running any number of issues. 
+> To give you a context, Scanning 2K-4K issues could take upto approx. 2hrs.
+
 
 # How to Use
 * Go to your Terminal
