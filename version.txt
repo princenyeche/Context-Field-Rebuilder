@@ -11,4 +11,10 @@ version - 0.2 [Initial version of scripts]
 version - 0.4 [Improvements to the above] - 6 May 2020
           [known problems]
           [1] [Select Cascading list field, can't append 
-               one values to options method]
+               one values to options method] BUG on Jira check ->  "Issues"
+               
+version - 0.6 [Improvements to the above] - [TBA]
+          [1] [Select Cascading list field, can't append 
+               one values to options method] BUG on Jira check ->  "Issues"
+          [2] Persistent Connection -> Useful when network error occurs or
+          authentication is disconnected or other reasons
