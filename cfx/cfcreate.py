@@ -7,8 +7,8 @@ Platform : Atlassian Jira Cloud
 Version  : 0.4
 Function : Script helps to build back deleted custom field context.
 **************************************************************************
-Required libraries : requests
-Download URL       : http://python-requests.org
+Required libraries : requests, tqdm
+Install via        : requirements.txt file
 License            : MIT License Copyright (c) 2020 Prince Nyeche
 API Token can be generated from https://id.atlassian.com/manage/api-tokens
 **************************************************************************
