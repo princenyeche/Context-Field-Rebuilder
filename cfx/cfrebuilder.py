@@ -18,9 +18,11 @@ import requests
 from requests.auth import HTTPBasicAuth
 import sys
 from cfx.cfcreate import CreateField
+from tqdm import tqdm
+from threading import Thread
 
-__version__ = '0.4'
-__author__ = 'Prince Nyeche'
+__version__ = "0.4"
+__author__ = "Prince Nyeche"
 email = None
 token = None
 baseurl = ""
@@ -48,7 +50,7 @@ class IssueHistory:
         jql_data = json.loads(data.content)
         x = Field()
         i = CreateField()
-        print("Filtering Issue Keys, {} Issues returned...".format(str(jql_data["total"])))
+        print("Filtering Issue Keys, {} Issues returned...".format(jql_data["total"]))
         field_name = input("Enter the Name of the Custom Field: \n")
         # to properly find a way to validate all fields on the instance.
         print("Searching...")
@@ -63,7 +65,7 @@ class IssueHistory:
 
     @staticmethod
     def sub_filter(q, retries=3, trials="Try Again!"):
-        field_name = q
+        # field_name = q
         x = Field()
         a = x.get_field()
         if a is not None:
@@ -76,8 +78,8 @@ class IssueHistory:
                       f"https://{baseurl}/secure/admin/ViewCustomFields.jspa" \
                       " then press 'Enter' \n"
             repeat(context=context, retries=retries, trials=trials)
-            # Certain field types doesn't support customField option endpoint. check `build.py` or `below`
-            #  for a list of fields. so no need to rebuild that, let's only check if it has context
+            # Certain field types doesn't support customField option endpoint. check `build.py` file
+            #  for a list of fields. so no need to rebuild the cf, let's only check if it has context
             no_option()
         # end of if block
 
@@ -96,8 +98,8 @@ class IssueHistory:
                              .format(baseurl, pkey, startAt, maxResults))
                     info = requests.get(webEx, auth=auth_request, headers=headers)
                     wjson = json.loads(info.content)
-                    for d in list(wjson["issues"]):
-                        # print("Matching, Issue key " + d["key"] + " to URL...") uncomment if you want to trail
+                    for d in tqdm(list(wjson["issues"])):
+                        # print("Matching, Issue key " + d["key"] + " to URL...") # uncomment if you want to trail
                         webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
                         data = requests.get(webURL, auth=auth_request, headers=headers)
                         fjson = json.loads(data.content)
@@ -114,9 +116,10 @@ class IssueHistory:
                                                                              j["fromString"], j["toString"],
                                                                              j["to"]),
                                                                             d=d)
+                # show our progress bar with time elapse
+                print("", end="\r")
                 startAt += 50
                 if startAt > (fullNumber - 1):
-                    ...
                     break
 
         print("*" * 90)
@@ -192,7 +195,6 @@ class IssueHistory:
                                 "value": p.__getitem__(1).lstrip(),
                                 "cascadingOptions": []
                             }
-                            # TODO: Post other options of  the Cascading fields
                         ]
 
                     }
@@ -219,7 +221,7 @@ class IssueHistory:
 def csd(data=None, j=None, d=None, field_name=None):
     if data.status_code != 201:
         pass
-        # print("Error: Unable to Post the Data to the Issue...".format(data.status_code))
+        # print("Error: Unable to Post the Data to the Issue {} with reason ...".format(data.status_code, data.reason))
     else:
         pass
         # print("Creating {} field option for {}".format(j[3], j[0]))
@@ -236,9 +238,9 @@ class Field(IssueHistory):
     if our options exist therein. if it doesn't then we build it back
     """
 
-    @staticmethod
     # c is returned as a tuple, we can use methods in tuple to fetch the required value
     # e.g. __getitem__() method which accepts int value for index beginning at 0.
+    @staticmethod
     def get_field():
         webURL = ("https://" + baseurl + "/rest/api/3/field")
         data = requests.get(webURL, auth=auth_request, headers=headers)
@@ -248,13 +250,13 @@ class Field(IssueHistory):
                 if c["schema"] is not None:
                     return c["name"], c["id"], c["schema"]["custom"], c["schema"]["customId"]
 
-    @staticmethod
     # a is returned as a tuple, we think this method is unreliable, change it to extend the function.
+    @staticmethod
     def get_field_types():
         #  To find the type of field_type used, use this endpoint
         #  https://<your-instance>.atlassian.net/rest/api/3/field/search?type=custom
         #  values accepted "custom". the default result returned is only 50.
-        #  however, we're able to run a loop of each option, page by page.
+        #  however, we're able to run a loop of each option, record by record.
         webURL = ("https://{}/rest/api/3/field/search?type=custom"
                   .format(baseurl))
         data = requests.get(webURL, auth=auth_request, headers=headers)
@@ -282,7 +284,7 @@ class Field(IssueHistory):
         global cm_dat
         v = CreateField()
         user = Field()
-        webURL = ("https://" + baseurl + "/rest/api/3/customField/" + str(g) + "/option")
+        webURL = ("https://{}/rest/api/3/customField/{}/option".format(baseurl, g))
         data = requests.get(webURL, auth=auth_request, headers=headers)
         cm_dat = json.loads(data.content)
         k = user.get_field().__getitem__(
@@ -313,20 +315,22 @@ class Field(IssueHistory):
         if "self" in str(cm_dat):
             if str(cm_dat["values"]) == "[]":
                 print(f"The Context for {field_name} has no values, defaulting to build options...")
-                self.get_field_issue_history()
+                # Let's use threading for any post request
+                Thread(target=self.get_field_issue_history()).start()
             else:
                 print(f"{field_name} has values posting to issue...")
                 for a in cm_dat["values"]:
                     if a["value"] is not None:
                         pass
-                self.post_field_data()
+                # Let's use threading for any post request
+                Thread(target=self.post_field_data()).start()
         elif "errorMessages" in str(cm_dat):
             print(f"Either Global Context for {field_name} doesn't exist, or \n"
                   f"you do not have permission on it.Please check via the UI")
             sys.exit(1)
 
-    @staticmethod
     # TODO: check if values has been posted before
+    @staticmethod
     def return_op_value(i=None):
         if str(cm_dat["values"]) == "[]":
             return i
@@ -335,8 +339,8 @@ class Field(IssueHistory):
                 pass
             return i
 
-    @staticmethod  # method for getting multi_choices values
     # TODO: get this field value as a list then post it back.
+    @staticmethod  # method for getting multi_choices values
     def fix_multi(j=None):
         m = str(j[3]).split(",")
         if m.__len__() > 0:
@@ -351,20 +355,14 @@ class Field(IssueHistory):
             maxResults = 50
             startAt = 0
             fullNumber = int(total / 1)
-            # print("This is the number: {}, max: {}, total: {}, start: {}"
-            # .format(fullNumber, maxResults, total, startAt))
-            # TODO: Provide an option to select between CSV file or not
-            # with open("jql.csv", "r") as csvFile:
-            # reader = csv.reader(csvFile, delimiter='\t')
-            # next(reader, None)
             while maxResults < total or maxResults > total:
                 if startAt < fullNumber:
                     webEx = ("https://{}/rest/api/3/search?jql=project%20in%20({})&startAt={}&maxResults={}"
                              .format(baseurl, pkey, startAt, maxResults))
                     info = requests.get(webEx, auth=auth_request, headers=headers)
                     wjson = json.loads(info.content)
-                    for d in list(wjson["issues"]):
-                        print("Matching, Issue key " + d["key"] + " to URL...")  # uncomment if you want to trail
+                    for d in tqdm(list(wjson["issues"])):
+                        # print("Matching, Issue key " + d["key"] + " to URL...")  # uncomment if you want to trail
                         webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
                         data = requests.get(webURL, auth=auth_request, headers=headers)
                         fjson = json.loads(data.content)
@@ -381,11 +379,12 @@ class Field(IssueHistory):
                                                                                         j["fromString"], j["toString"],
                                                                                         j["to"]),
                                                                                        d=d)
-
+                # show our progress bar with time elapse
+                print("", end="\r")
                 startAt += 50
                 if startAt > (fullNumber - 1):
-                    print("Total number of Issues fixed: {}, Max Loop/Issue: {},  Page: {} of {}"
-                          .format(total, maxResults, startAt, fullNumber))
+                    print("Total number of Issues fixed: {}, Max Loop/Issue: {},  Loop Record #: {}"
+                          .format(total, maxResults, startAt))
                     break
 
         print("Custom Field Rebuilder Completed...".upper())
@@ -474,9 +473,6 @@ class Field(IssueHistory):
                                     {
                                         # post  single values of cascading fields
                                         "value": p.__getitem__(1).lstrip()
-                                        # "child": {
-                                        #    "value": ""
-                                        # }
                                     }
 
                             }
@@ -506,11 +502,12 @@ class Field(IssueHistory):
 # call to if-else function
 def psd(response=None, d=None, j=None):
     if response.status_code != 204:
-        print("Error: Unable to Post \"{}\" Data to the Issue to {} with Status: {} \n"
-              .format(j[3], d["key"], response.status_code))
+        print("Error: Unable to Post \"{}\" Data to the Issue to {} with Status: {} and reason {} \n"
+              .format(j[3], d["key"], response.status_code, response.reason))
         # print("*" * 90)
     else:
-        print("Custom field Option \"{}\" Added to Issue {}".format(j[3], d["key"]))
+        pass
+        # print("Custom field Option \"{}\" Added to Issue {}".format(j[3], d["key"]))
         # print("*" * 90)
         # uncomment if you want to see the post information.
 
@@ -645,8 +642,8 @@ def post_multi(j=None):
         return c
 
 
+# TODO: check the context endpoint
 def context_check():
-    # TODO: check the context endpoint
     x = Field()
     webURL = ("https://{}/rest/api/3/field/{}/contexts".
               format(baseurl, x.get_field().__getitem__(3)))
