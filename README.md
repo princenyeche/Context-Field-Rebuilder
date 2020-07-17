@@ -22,15 +22,15 @@ If you installed Python from source, with an installer from python.org, or via [
 > Required Package → Requests can be gotten from http://python-requests.org
 > You can also install a virtual environment to run commands as well. you can install as `$: pip install virtualenv` on  terminal (for MacOs users → use this guide on [Pipenv](https://docs.python-guide.org/dev/virtualenvs/) ).To activate the virtual environment, use `$: source <location where venv is>/bin/activate` 
 
-In order to download, Requests run your PIP by using `$: pip install requests` or `$: sudo pip install requests` if on linux.
+In order to download the modules run `$: pip install -r requirements.txt`
 
 Ensure you have the right permission on the Project before running the Script such as **BROWSE**, **CREATE** , **EDIT ISSUES Permission** & also Access to Jira Settings.
 
 Get an API Token from here https://id.atlassian.com/manage/api-tokens if you haven’t.
 
 # Scale
-> This Script is useful when you want to scan and check for little projects. If the issue number is large > 5K Issues, we suggest you reach out to "**Atlassian Support**" to help provide other faster methods such as "**Restore Instance**". However, if you have the patience to wait, the Script is more than capable of running any number of issues. 
-> To give you a context, Scanning 2K-4K issues could take upto approx. 2hrs.
+> This Script is useful when you want to scan and check for little projects. If the issue number is large > 10K Issues, we suggest you reach out to "**Atlassian Support**" to help provide other faster methods such as "**Restore Instance**". However, if you have the patience to wait, the Script is more than capable of running any number of issues. 
+> To give you a context, Scanning 2K-4K issues could take upto approx. 1hrs.
 
 
 # How to Use
