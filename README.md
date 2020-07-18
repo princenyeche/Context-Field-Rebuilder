@@ -38,6 +38,7 @@ Get an API Token from here https://id.atlassian.com/manage/api-tokens if you hav
 * Go to your Terminal
 * Run the script by using `$: python3 build.py` or `$: python build.py` if your machine is already on python 3.
 * Just enter the project key, that you would like rebuild. Please enter only valid Project key. example `NB`, For multiple projects, please separate by comma. e.g `NB,NGT,TIS`.
+![Rebuild](https://github.com/princenyeche/Context-Field-Rebuilder/blob/master/images/rebuild.png)
 
 # See License
 * LICENSE
