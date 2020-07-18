@@ -10,7 +10,7 @@ version - 0.6 [Improvements to the below] - 17 July 2020
           authentication is disconnected or other reasons
           
           [New Feature]
-          [1] Added a Progress bar using tqdm module, so you can see the progress and time take
+          [1] Added a Progress bar using tqdm module, so you can see the progress and time taken
           for the script to run.
           [2] Added Threading to each Post request which cuts down the posting by half the time.
           so processing is much faster.
