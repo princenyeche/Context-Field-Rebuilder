@@ -15,14 +15,21 @@ The below script is written in python and helps to rebuild deleted context optio
 * If you already know the options and have added it as a default value in the custom field context, the field is able to skip rebuilding the options and simply post back the correct value
 
 # Read Me
-Make sure Python is installed! Goto https://www.python.org/downloads/ any version from v3.x will do. You will also need to ensure you have PIP on your computer with the download. check by using `$: pip --version`
+Make sure Python is installed! Goto https://www.python.org/downloads/ any version from v3.x will do. You will also need to ensure you have PIP on your computer with the download. check by using 
+```bash
+$: pip --version
+```
 
 If you installed Python from source, with an installer from python.org, or via [Homebrew](https://brew.sh/) you should already have pip. If you’re on Linux and installed using your OS package manager, you may have to [install pip](https://pip.pypa.io/en/stable/installing/) separately.
 
 > Required Package → Requests can be gotten from http://python-requests.org
-> You can also install a virtual environment to run commands as well. you can install as `$: pip install virtualenv` on  terminal (for MacOs users → use this guide on [Pipenv](https://docs.python-guide.org/dev/virtualenvs/) ).To activate the virtual environment, use `$: source <location where venv is>/bin/activate` 
+> You can also install a virtual environment to run commands as well. you can install as `pip install virtualenv` on  terminal (for MacOs users → use this guide on [Pipenv](https://docs.python-guide.org/dev/virtualenvs/) ).To activate the virtual environment, use `source <location where venv is>/bin/activate` 
 
-In order to download the modules run `$: pip install -r requirements.txt`
+
+In order to download the modules run 
+```bash
+ $: pip install -r requirements.txt
+```
 
 Ensure you have the right permission on the Project before running the Script such as **BROWSE**, **CREATE** , **EDIT ISSUES Permission** & also Access to Jira Settings.
 
