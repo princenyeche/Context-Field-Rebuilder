@@ -1,6 +1,6 @@
-[next version - 0.8] - [TBA]
+# [next version - 0.8] - [TBA]
 
-version - 0.6 [Improvements to the below] - 17 July 2020   
+## version - 0.6 [Improvements to the below] - 17 July 2020   
           [known problems]
           [1] When a custom field is renamed, the UI reflects the change, the REST API
           changelog history retains the old name. BUG check ->  "Issues"
@@ -15,14 +15,14 @@ version - 0.6 [Improvements to the below] - 17 July 2020
           [2] Added Threading to each Post request which cuts down the posting by half the time.
           so processing is much faster.
           
-version - 0.4 [Improvements to the below] - 6 May 2020
+## version - 0.4 [Improvements to the below] - 6 May 2020
           [known problems]
           [1] [Select Cascading list field, can't append 
                one values to options method] BUG on Jira check ->  "Issues"
           [2] Persistent Connection -> Useful when network error occurs or
           authentication is disconnected or other reasons
 
-version - 0.2 [Initial version of scripts]
+## version - 0.2 [Initial version of scripts]
           [known problems]
           [1] [Select Cascading list field, can't append 
                one values to options method]
