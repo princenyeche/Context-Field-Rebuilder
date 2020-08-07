@@ -4,7 +4,7 @@
 Script   : Context Field Rebuilder for Custom field
 Author   : Prince Nyeche
 Platform : Atlassian Jira Cloud
-Version  : 0.4
+Version  : 0.6
 **************************************************************************
 Required libraries : requests, tqdm
 Install via        : requirements.txt file
