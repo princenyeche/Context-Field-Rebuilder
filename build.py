@@ -4,7 +4,7 @@
 Script   : Context Field Rebuilder for Custom field
 Author   : Prince Nyeche
 Platform : Atlassian Jira Cloud
-Version  : 0.6
+Version  : 0.8
 Function : Script helps to build back deleted custom field context.
 **************************************************************************
 Required libraries : requests, tqdm
