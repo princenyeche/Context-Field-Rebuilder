@@ -4,7 +4,7 @@
 Script   : Context Field Rebuilder for Custom field
 Author   : Prince Nyeche
 Platform : Atlassian Jira Cloud
-Version  : 0.6
+Version  : 0.8
 **************************************************************************
 Required libraries : requests, tqdm
 Install via        : requirements.txt file
@@ -14,6 +14,9 @@ API Token can be generated from https://id.atlassian.com/manage/api-tokens
 """
 
 import json
+import time
+import os
+import csv
 import requests
 from requests.auth import HTTPBasicAuth
 import sys
@@ -21,7 +24,7 @@ from cfx.cfcreate import CreateField
 from tqdm import tqdm
 from threading import Thread
 
-__version__ = "0.6"
+__version__ = "0.8"
 __author__ = "Prince Nyeche"
 email = None
 token = None
@@ -32,6 +35,73 @@ headers = None
 jql_data = None
 cm_dat = None
 field_name = None
+SAVE_DIR = "CHECKPOINT"
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+FILED = "saved.csv"
+
+
+class SavePoint:
+    """
+    This class helps with retrieving the last known point of an iteration
+    it checks if the script has ran before during start up and evaluates
+    where to begin from the saved checkpoint.
+    This way, we can actually begin an iteration from the last known point
+    instead of starting from the beginning thus saving time and effort.
+    """
+
+    def __init__(self, field_name=None, startAt=None, method=(None, None), file=None, path=None):
+        self.field_name = field_name
+        self.startAt = startAt
+        self.method = method
+        self.file = file
+        self.path = path
+        self.cls = Field()
+        self.save_path = os.path.join(self.path, self.file)
+
+    def load_checkpoint(self):
+        """
+        check if there's a savepoint available
+        """
+        print("Looking for Check Point...")
+        if os.path.exists(self.path):
+            self.read_checkpoint(data=self.save_path)
+        else:
+            print("No Saved file exist within the Check Point Directory")
+            self.cls.sub_filter(q=self.field_name)
+
+    def read_checkpoint(self, data=None):
+        print("Check Point Found: Reading Check Point data, Please wait...")
+        time.sleep(2)
+        with open(data, "r") as csv_file:
+            reader = csv.reader(csv_file, delimiter=",")
+
+            for m in reader:
+                print("Loading Check Point History...")
+                print("*" * 90)
+                time.sleep(2)
+                if self.field_name == m[0]:
+                    if m.__contains__("post_field_data"):
+                        self.cls.post_field_data(load=int(m[3]))
+                    elif m.__contains__("get_field_issue_history"):
+                        self.cls.get_field_issue_history(load=int(m[3]))
+                else:
+                    print("It seems the field name is not the same with the save point, so we'll resume normally...")
+                    self.cls.sub_filter(q=self.field_name)
+
+    def save_checkpoint(self, field_name=None, method=(None, None), startAt=None):
+        if not os.path.exists(self.save_path):
+            os.mkdir(self.path)
+            os.open(self.file, flags=os.O_CREAT)
+
+        with open(self.save_path, "w") as new_csv:
+            write = csv.writer(new_csv, delimiter=",")
+            save = [field_name, method[0], method[1],  startAt]
+            write.writerow(save)
+
+    # delete the check_point if the iterations are completed.
+    def delete_checkpoint(self):
+        os.remove(self.save_path)
+        os.removedirs(self.path)
 
 
 # we need to find all the Issues where the custom_field existed before
@@ -55,9 +125,14 @@ class IssueHistory:
         # to properly find a way to validate all fields on the instance.
         print("Searching...")
         a = x.get_field_types()
+        path = os.path.join(BASE_DIR, SAVE_DIR)
         if a is not None:
             print(f"Found field: \"{field_name}\", Searching option...")
-            self.sub_filter(q=field_name)
+            w = SavePoint(field_name=field_name, file=FILED, path=path)
+            if os.path.exists(os.path.join(path, FILED)):
+                w.load_checkpoint()
+            else:
+                self.sub_filter(q=field_name)
         elif a is None:
             print(f"\"{field_name}\" seems like it doesn't exist, do you want to Create it? "
                   f"Please check in the UI before proceeding. if unsure!?")
@@ -84,13 +159,16 @@ class IssueHistory:
         # end of if block
 
     # Issue History search, it finds out the values in the change log then extract and transform it.
-    def get_field_issue_history(self):
+    def get_field_issue_history(self, load=None):
         print("We're gathering the Custom field options to Rebuild it.\n"
               "We'll let you know when we're done...")
         if list(jql_data["issues"]) is not None:
             total = jql_data["total"]
             maxResults = 50
-            startAt = 0
+            startAt = load if load is not None else 0
+            path = os.path.join(BASE_DIR, SAVE_DIR)
+            b = SavePoint(field_name=field_name, startAt=startAt, method=("get_field_issue_history", None),
+                          file=FILED, path=path)
             fullNumber = int(total / 1)
             while total > maxResults or total < maxResults:
                 if startAt < fullNumber:
@@ -112,6 +190,10 @@ class IssueHistory:
                                     if fetch is not None:
                                         for j in fetch:
                                             if j["field"] == field_name:
+                                                b.save_checkpoint(field_name=field_name,
+                                                                  method=("get_field_issue_history", None),
+                                                                  startAt=startAt)
+                                                
                                                 self.create_back_cf_options((j["field"], j["fieldId"],
                                                                              j["fromString"], j["toString"],
                                                                              j["to"]),
@@ -121,7 +203,8 @@ class IssueHistory:
                 startAt += 50
                 if startAt > (fullNumber - 1):
                     break
-
+                    
+            b.delete_checkpoint()
         print("*" * 90)
         print("Custom field Options has been Added".upper())
         # end of loop.
@@ -175,7 +258,7 @@ class IssueHistory:
                     {
                         "options": [
                             {
-                                # TODO: work on getting the cascading select list to post multiple values
+                                # cascading select list to post multiple values
                                 "value": p.__getitem__(1).lstrip(),
                                 "cascadingOptions": [p.__getitem__(3).lstrip()
                                                      ]
@@ -329,7 +412,7 @@ class Field(IssueHistory):
                   f"you do not have permission on it.Please check via the UI")
             sys.exit(1)
 
-    # TODO: check if values has been posted before
+    # check if values has been posted before, add more conditions if it should be restricted.
     @staticmethod
     def return_op_value(i=None):
         if str(cm_dat["values"]) == "[]":
@@ -339,7 +422,7 @@ class Field(IssueHistory):
                 pass
             return i
 
-    # TODO: get this field value as a list then post it back.
+    # get this field value as a list then post it back.
     @staticmethod  # method for getting multi_choices values
     def fix_multi(j=None):
         m = str(j[3]).split(",")
@@ -347,13 +430,16 @@ class Field(IssueHistory):
             return m
 
     # if values exist, let's just post it instead.
-    def post_field_data(self):
+    def post_field_data(self, load=None):
         print("We're posting the option values to the Issues. This might take a while... \n"
               "A completion message will be shown, when we're done.")
         if list(jql_data["issues"]) is not None:
             total = jql_data["total"]
             maxResults = 50
-            startAt = 0
+            startAt = load if load is not None else 0
+            path = os.path.join(BASE_DIR, SAVE_DIR)
+            b = SavePoint(field_name=field_name, startAt=startAt, method=(None, "post_field_data"),
+                          file=FILED, path=path)
             fullNumber = int(total / 1)
             while maxResults < total or maxResults > total:
                 if startAt < fullNumber:
@@ -375,6 +461,8 @@ class Field(IssueHistory):
                                     if fetch is not None:
                                         for j in fetch:
                                             if j["field"] == field_name:
+                                                b.save_checkpoint(field_name=field_name,
+                                                                  method=(None, "post_field_data"), startAt=startAt)
                                                 self.rebuild_issue_custom_field_values((j["field"], j["fieldId"],
                                                                                         j["fromString"], j["toString"],
                                                                                         j["to"]),
@@ -386,7 +474,8 @@ class Field(IssueHistory):
                     print("Total number of Issues fixed: {}, Max Loop/Issue: {},  Loop Record #: {}"
                           .format(total, maxResults, startAt))
                     break
-
+                    
+            b.delete_checkpoint()
         print("Custom Field Rebuilder Completed...".upper())
         sys.exit(0)
 
@@ -561,7 +650,7 @@ def jira_basic_auth():
     global token
     global baseurl
     global pkey
-    # TODO: consider using command line argument
+    # TODO: consider using command line argument if ever
     # parser = argparse.ArgumentParser(prog='builder', description='Rebuild custom field', usage='%(prog)s [options]')
     # parser.add_argument('-e', '--email', help='Email of your Atlassian Account')
     # parser.add_argument('-t', '--token', help='API token to your Atlassian Account')
@@ -612,7 +701,7 @@ def validate(email=None, token=None, baseurl=None, pkey=None):
         print("Your Project key can't be empty.")
 
 
-# might not be used in this context, we'll leave it here
+# out a message when no context exist.
 def repeat(context=None, retries=None, trials=None):
     t = Field()
     while t.get_field() is None:
@@ -642,7 +731,8 @@ def post_multi(j=None):
         return c
 
 
-# TODO: check the context endpoint
+# check the context endpoint
+""" 
 def context_check():
     x = Field()
     webURL = ("https://{}/rest/api/3/field/{}/contexts".
@@ -655,6 +745,7 @@ def context_check():
         return True
     else:
         return False
+"""
 
 
 # function for cascading select list
