@@ -63,7 +63,7 @@ class SavePoint:
         check if there's a savepoint available
         """
         print("Looking for Check Point...")
-        if os.path.exists(self.path):
+        if os.path.exists(self.save_path):
             self.read_checkpoint(data=self.save_path)
         else:
             print("No Saved file exist within the Check Point Directory")
