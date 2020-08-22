@@ -1,4 +1,14 @@
-# [next version - 0.8] - [TBA]
+# [next version - 1.0] - [TBA]
+
+## version - 0.8 [Improvements to the below] - 22 August 2020 :white_check_mark:
+          [known problems]
+          [1] When a custom field is renamed, the UI reflects the change, the REST API
+          changelog history retains the old name. BUG check ->  "Issues"
+          
+          [New Feature]
+          [1] Saved CheckPoint is now available, just in case the script is interrupted,
+          the script can resume back from the last checkpoint.
+          
 
 ## version - 0.6 [Improvements to the below] - 17 July 2020   
           [known problems]
