@@ -121,7 +121,6 @@ class IssueHistory:
         i = CreateField()
         print("Filtering Issue Keys, {} Issues returned...".format(jql_data["total"]))
         field_name = input("Enter the Name of the Custom Field: \n")
-        # to properly find a way to validate all fields on the instance.
         print("Searching...")
         a = x.get_field_types()
         path = os.path.join(BASE_DIR, SAVE_DIR)
