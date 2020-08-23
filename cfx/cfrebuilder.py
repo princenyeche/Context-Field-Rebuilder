@@ -91,7 +91,6 @@ class SavePoint:
     def save_checkpoint(self, field_name=None, method=(None, None), startAt=None):
         if not os.path.exists(self.save_path):
             os.mkdir(self.path)
-            os.open(self.file, flags=os.O_CREAT)
 
         with open(self.save_path, "w") as new_csv:
             write = csv.writer(new_csv, delimiter=",")
