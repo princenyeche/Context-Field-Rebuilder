@@ -67,6 +67,9 @@ class SavePoint:
             self.read_checkpoint(data=self.save_path)
         else:
             print("No Saved file exist within the Check Point Directory")
+            time.sleep(2)
+            print("*" * 90)
+            os.open(self.save_path, flags=os.O_CREAT)
             self.cls.sub_filter(q=self.field_name)
 
     def read_checkpoint(self, data=None):
