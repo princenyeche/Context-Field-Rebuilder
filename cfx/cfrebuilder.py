@@ -128,7 +128,7 @@ class IssueHistory:
         if a is not None:
             print(f"Found field: \"{field_name}\", Searching option...")
             w = SavePoint(field_name=field_name, file=FILED, path=path)
-            if os.path.exists(os.path.join(path, FILED)):
+            if os.path.exists(path):
                 w.load_checkpoint()
             else:
                 self.sub_filter(q=field_name)
