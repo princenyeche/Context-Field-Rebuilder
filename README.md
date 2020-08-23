@@ -16,8 +16,8 @@ The below script is written in python and helps to rebuild deleted context optio
 
 # Read Me
 Make sure Python is installed! Goto https://www.python.org/downloads/ any version from v3.x will do. You will also need to ensure you have PIP on your computer with the download. check by using 
-```bash
-$: pip --version
+```python
+pip --version
 ```
 
 If you installed Python from source, with an installer from python.org, or via [Homebrew](https://brew.sh/) you should already have pip. If you’re on Linux and installed using your OS package manager, you may have to [install pip](https://pip.pypa.io/en/stable/installing/) separately.
@@ -27,8 +27,8 @@ If you installed Python from source, with an installer from python.org, or via [
 
 
 In order to download the modules run 
-```bash
- $: pip install -r requirements.txt
+```python
+pip install -r requirements.txt
 ```
 
 Ensure you have the right permission on the Project before running the Script such as **BROWSE**, **CREATE** , **EDIT ISSUES Permission** & also Access to Jira Settings.
@@ -36,7 +36,7 @@ Ensure you have the right permission on the Project before running the Script su
 Get an API Token from here https://id.atlassian.com/manage/api-tokens if you haven’t.
 
 # Scale
-> This Script is useful when you want to scan and check for little projects. If the issue number is large > 10K Issues, we suggest you reach out to "**Atlassian Support**" to help provide other faster methods such as "**Restore Instance**". However, if you have the patience to wait, the Script is more than capable of running any number of issues. 
+> This Script is useful when you want to scan and check for little projects. If the issue number is large > 10K Issues, we suggest you reach out to "**Atlassian Support**" to help provide other faster methods such as "**Restore Instance**". However, if you have the patience to wait, the Script is more than capable of running any number of issues and with the `SavePoint` on v0.8 you do not have to worry about starting from beginning incase of a disconnection from the script. 
 > To give you a context, Scanning 2K-4K issues could take upto approx. 1hrs.
 
 
@@ -46,6 +46,7 @@ Get an API Token from here https://id.atlassian.com/manage/api-tokens if you hav
 * Run the script by using `$: python3 build.py` or `$: python build.py` if your machine is already on python 3.
 * Just enter the project key, that you would like rebuild. Please enter only valid Project key. example `NB`, For multiple projects, please separate by comma. e.g `NB,NGT,TIS`.
 ![Rebuild](https://github.com/princenyeche/Context-Field-Rebuilder/blob/master/images/rebuild.png)
+ ![savepoint](https://github.com/princenyeche/Context-Field-Rebuilder/blob/master/images/savepoint.png)
 
 # See License
 * LICENSE
