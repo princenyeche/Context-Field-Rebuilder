@@ -35,6 +35,7 @@ Ensure you have the right permission on the Project before running the Script su
 
 Get an API Token from here https://id.atlassian.com/manage/api-tokens if you haven’t.
 
+
 # Scale
 > This Script is useful when you want to scan and check for little projects. If the issue number is large > 10K Issues, we suggest you reach out to "**Atlassian Support**" to help provide other faster methods such as "**Restore Instance**". However, if you have the patience to wait, the Script is more than capable of running any number of issues and with the `SavePoint` on v0.8 you do not have to worry about starting from beginning incase of a disconnection from the script. 
 > To give you a context, Scanning 2K-4K issues could take upto approx. 1hrs.
@@ -45,8 +46,40 @@ Get an API Token from here https://id.atlassian.com/manage/api-tokens if you hav
 * Go to your Terminal
 * Run the script by using `$: python3 build.py` or `$: python build.py` if your machine is already on python 3.
 * Just enter the project key, that you would like rebuild. Please enter only valid Project key. example `NB`, For multiple projects, please separate by comma. e.g `NB,NGT,TIS`.
+
+ ## Using the CLI method
+ * Start by calling the `python build.py -h` file as 4 Arguments are required to successfully run the script.
+ ```bash
+myuser@user: python build.py -h                                                                                                       
+****************************************************************************************************
+***                                             1.0                                              ***
+***                                        Prince Nyeche                                         ***
+****************************************************************************************************
+usage: Context Field Rebuilder [options]
+
+Rebuild custom field
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -e EMAIL, --email EMAIL
+                        Email of your Atlassian Account
+  -t TOKEN, --token TOKEN
+                        API token to your Atlassian Account
+  -l BASEURL, --baseurl BASEURL
+                        Instance URL to Jira Cloud
+  -p PKEY, --pkey PKEY  Project key of your Project
+
+```
+
+Run the script using the below method, you can use double/single quotes or no quotes at all in the argument fields.
+ ```bash
+ python build.py -e "<email_address>" -t "<APITOKEN>" -l "<nexusfive.atlassian.net>" -p "NG,T6"
+ ```
+ 
 ![Rebuild](https://github.com/princenyeche/Context-Field-Rebuilder/blob/master/images/rebuild.png)
  ![savepoint](https://github.com/princenyeche/Context-Field-Rebuilder/blob/master/images/savepoint.png)
+ 
+
 
 # See License
 * LICENSE
