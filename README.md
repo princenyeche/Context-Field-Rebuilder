@@ -48,7 +48,7 @@ Get an API Token from here https://id.atlassian.com/manage/api-tokens if you hav
 * Just enter the project key, that you would like rebuild. Please enter only valid Project key. example `NB`, For multiple projects, please separate by comma. e.g `NB,NGT,TIS`.
 
  ## Using the CLI method
- * To see how the script works call the `python build.py -h` file on terminal; 4 Arguments are required to successfully run the script.
+ * To see how the script works call the `python build.py -h` file on terminal.
  ```bash
 myuser@user: python build.py -h                                                                                                       
 ****************************************************************************************************
