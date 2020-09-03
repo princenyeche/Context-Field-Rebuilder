@@ -4,7 +4,7 @@
 Script   : Context Field Rebuilder for Custom field
 Author   : Prince Nyeche
 Platform : Atlassian Jira Cloud
-Version  : 0.8
+Version  : 1.0
 **************************************************************************
 Required libraries : requests, tqdm
 Install via        : requirements.txt file
@@ -18,8 +18,9 @@ import time
 import os
 import csv
 import requests
-from requests.auth import HTTPBasicAuth
+import argparse
 import sys
+from requests.auth import HTTPBasicAuth
 from cfx.cfcreate import CreateField
 from tqdm import tqdm
 from threading import Thread
@@ -141,7 +142,7 @@ class IssueHistory:
 
     @staticmethod
     def sub_filter(q, retries=3, trials="Try Again!"):
-        # field_name = q
+        # field_name = q  # not required since it's Global variable
         x = Field()
         a = x.get_field()
         if a is not None:
@@ -194,7 +195,7 @@ class IssueHistory:
                                                 b.save_checkpoint(field_name=field_name,
                                                                   method=("get_field_issue_history", None),
                                                                   startAt=startAt)
-                                                
+
                                                 self.create_back_cf_options((j["field"], j["fieldId"],
                                                                              j["fromString"], j["toString"],
                                                                              j["to"]),
@@ -204,7 +205,7 @@ class IssueHistory:
                 startAt += 50
                 if startAt > (fullNumber - 1):
                     break
-                    
+
             b.delete_checkpoint()
         print("*" * 90)
         print("Custom field Options has been Added".upper())
@@ -334,7 +335,7 @@ class Field(IssueHistory):
                 if c["schema"] is not None:
                     return c["name"], c["id"], c["schema"]["custom"], c["schema"]["customId"]
 
-    # a is returned as a tuple, we think this method is unreliable, change it to extend the function.
+    # a is returned as a tuple, and we can extract the record.
     @staticmethod
     def get_field_types():
         #  To find the type of field_type used, use this endpoint
@@ -399,7 +400,7 @@ class Field(IssueHistory):
         if "self" in str(cm_dat):
             if str(cm_dat["values"]) == "[]":
                 print(f"The Context for {field_name} has no values, defaulting to build options...")
-                # Let's use threading for any post request
+                # Let's use threading for any post request, we'll look into this later.
                 Thread(target=self.get_field_issue_history()).start()
             else:
                 print(f"{field_name} has values posting to issue...")
@@ -475,7 +476,7 @@ class Field(IssueHistory):
                     print("Total number of Issues fixed: {}, Max Loop/Issue: {},  Loop Record #: {}"
                           .format(total, maxResults, startAt))
                     break
-                    
+
             b.delete_checkpoint()
         print("Custom Field Rebuilder Completed...".upper())
         sys.exit(0)
@@ -637,7 +638,7 @@ def no_option():
         user.get_field_issue_history()
 
 
-# running get request for authentication and keep our session active
+# running get request for authentication to keep our session active
 def make_session(email=None, token=None):
     global auth_request
     global headers
@@ -651,22 +652,32 @@ def jira_basic_auth():
     global token
     global baseurl
     global pkey
-    # TODO: consider using command line argument if ever
-    # parser = argparse.ArgumentParser(prog='builder', description='Rebuild custom field', usage='%(prog)s [options]')
-    # parser.add_argument('-e', '--email', help='Email of your Atlassian Account')
-    # parser.add_argument('-t', '--token', help='API token to your Atlassian Account')
-    # parser.add_argument('-l', '--baseurl', help='Instance URL to Jira Cloud')
-    # parser.add_argument('-p', '--pkey', help='Project key of your Project')
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser(prog='Context Field Rebuilder', description='Rebuild custom field',
+                                     usage='%(prog)s [options]')
+    parser.add_argument('-e', '--email', help='Email of your Atlassian Account')
+    parser.add_argument('-t', '--token', help='API token to your Atlassian Account')
+    parser.add_argument('-l', '--baseurl', help='Instance URL to Jira Cloud')
+    parser.add_argument('-p', '--pkey', help='Project key of your Project')
+    args = parser.parse_args()
 
-    email = input("Enter your Email Address: \n")
-    validate(email=email)
-    token = input("Enter your API Token: \n")
-    validate(token=token)
-    baseurl = input("Enter your Instance Full URL (e.g. nexusfive.atlassian.net): \n")
-    validate(baseurl=baseurl)
-    pkey = input("Enter your Project Key (e.g. for Multiple Projects separate by comma e.g NB, GT ): \n")
-    validate(pkey=pkey)
+    email = args.__dict__["email"]
+    token = args.__dict__["token"]
+    baseurl = args.__dict__["baseurl"]
+    pkey = args.__dict__["pkey"]
+
+    if args.email is None:
+        email = input("Enter your Email Address: \n")
+        validate(email=email)
+    if args.token is None:
+        token = input("Enter your API Token: \n")
+        validate(token=token)
+    if args.baseurl is None:
+        baseurl = input("Enter your Instance Full URL (e.g. nexusfive.atlassian.net): \n")
+        validate(baseurl=baseurl)
+    if args.pkey is None:
+        pkey = input("Enter your Project Key (e.g. NB - for Multiple Projects separate by comma e.g NB,GT ): \n")
+        validate(pkey=pkey)
+
     login(baseurl, email, token)
 
 
