@@ -117,14 +117,16 @@ class IssueHistory:
     later since we passed it as positional argument or kwargs
     """
 
-    def filter_issue_keys(self, data=None):
+    def filter_issue_keys(self, data=None, args=None):
         global jql_data  # saving our JQL search here in a Global variable
         global field_name  # our custom field name
         jql_data = json.loads(data.content)
         x = Field()
         i = CreateField()
         print("Filtering Issue Keys, {} Issues returned...".format(jql_data["total"]))
-        field_name = input("Enter the Name of the Custom Field: \n")
+        if args.field is None:
+            args.field = field_name = input("Enter the Name of the Custom Field: \n")
+        field_name = args.field
         print("Searching...")
         a = x.get_field_types()
         path = os.path.join(BASE_DIR, SAVE_DIR)
@@ -658,12 +660,14 @@ def jira_basic_auth():
     parser.add_argument('-t', '--token', help='API token to your Atlassian Account')
     parser.add_argument('-l', '--baseurl', help='Instance URL to Jira Cloud')
     parser.add_argument('-p', '--pkey', help='Project key of your Project')
+    parser.add_argument('-f', '--field', help='Field Name of your Custom Field')
     args = parser.parse_args()
 
     email = args.__dict__["email"]
     token = args.__dict__["token"]
     baseurl = args.__dict__["baseurl"]
     pkey = args.__dict__["pkey"]
+    field_name = args.__dict__["field"]
 
     if args.email is None:
         email = input("Enter your Email Address: \n")
@@ -678,11 +682,11 @@ def jira_basic_auth():
         pkey = input("Enter your Project Key (e.g. NB - for Multiple Projects separate by comma e.g NB,GT ): \n")
         validate(pkey=pkey)
 
-    login(baseurl, email, token)
+    login(baseurl, email, token, args=args)
 
 
 # authenticate user
-def login(baseurl, email, token):
+def login(baseurl, email, token, args=None):
     if email and token is not None:
         make_session(email, token)
         webURL = ("https://{}/rest/api/3/search?jql=project%20in%20({})&startAt=0&maxResults=100"
@@ -691,7 +695,7 @@ def login(baseurl, email, token):
         if data.status_code == 200:
             print("Login Successful...\n")
             run = IssueHistory()
-            run.filter_issue_keys(data)
+            run.filter_issue_keys(data, args=args)
         else:
             sys.stderr.write("Authentication Failed...\n")
             sys.exit(1)
