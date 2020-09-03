@@ -48,7 +48,7 @@ Get an API Token from here https://id.atlassian.com/manage/api-tokens if you hav
 * Just enter the project key, that you would like rebuild. Please enter only valid Project key. example `NB`, For multiple projects, please separate by comma. e.g `NB,NGT,TIS`.
 
  ## Using the CLI method
- * Start by calling the `python build.py -h` file as 4 Arguments are required to successfully run the script.
+ * Start the script by calling the `python build.py -h` file; 4 Arguments are required to successfully run the script.
  ```bash
 myuser@user: python build.py -h                                                                                                       
 ****************************************************************************************************
@@ -68,12 +68,14 @@ optional arguments:
   -l BASEURL, --baseurl BASEURL
                         Instance URL to Jira Cloud
   -p PKEY, --pkey PKEY  Project key of your Project
+  -f FIELD, --field FIELD
+                        Field Name of your Custom Field
 
 ```
 
-Run the script using the below method, you can use double/single quotes or no quotes at all in the argument fields.
+Run the script using the below method, you can use double/single quotes only if a space is required or no quotes at all in the argument if no space is needed.
  ```bash
- python build.py -e "<email_address>" -t "<APITOKEN>" -l "<nexusfive.atlassian.net>" -p "NG,T6"
+ python build.py -e "<email_address>" -t "<APITOKEN>" -l "<nexusfive.atlassian.net>" -p "NG,T6" -f "Multiple files"
  ```
  
 ![Rebuild](https://github.com/princenyeche/Context-Field-Rebuilder/blob/master/images/rebuild.png)
