@@ -1,6 +1,15 @@
-# [next version - 1.0] - [TBA]
+# [next version - 1.2] - [TBA]
 
-## version - 0.8 [Improvements to the below] - 22 August 2020 :white_check_mark:
+## version - 1.0 [Improvements to the below] - 3 September 2020 :white_check_mark:
+          [known problems]
+          [1] When a custom field is renamed, the UI reflects the change, the REST API
+          changelog history retains the old name. BUG check ->  "Issues"
+          
+          [New Feature]
+          [1] Added a Command Line Argument features, now you can quickly run multiple
+          instances of the same script and incorporate it within a shell script.
+
+## version - 0.8 [Improvements to the below] - 22 August 2020 
           [known problems]
           [1] When a custom field is renamed, the UI reflects the change, the REST API
           changelog history retains the old name. BUG check ->  "Issues"
