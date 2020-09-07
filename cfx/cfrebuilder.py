@@ -25,7 +25,7 @@ from cfx.cfcreate import CreateField
 from tqdm import tqdm
 from threading import Thread
 
-__version__ = "0.8"
+__version__ = "1.0"
 __author__ = "Prince Nyeche"
 email = None
 token = None
