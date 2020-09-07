@@ -183,6 +183,9 @@ class IssueHistory:
                     for d in tqdm(list(wjson["issues"])):
                         # print("Matching, Issue key " + d["key"] + " to URL...") # uncomment if you want to trail
                         webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
+                        b.save_checkpoint(field_name=field_name,
+                                          method=("get_field_issue_history", None),
+                                          startAt=startAt)
                         data = requests.get(webURL, auth=auth_request, headers=headers)
                         fjson = json.loads(data.content)
                         if data.status_code != 200:
@@ -194,10 +197,6 @@ class IssueHistory:
                                     if fetch is not None:
                                         for j in fetch:
                                             if j["field"] == field_name:
-                                                b.save_checkpoint(field_name=field_name,
-                                                                  method=("get_field_issue_history", None),
-                                                                  startAt=startAt)
-
                                                 self.create_back_cf_options((j["field"], j["fieldId"],
                                                                              j["fromString"], j["toString"],
                                                                              j["to"]),
@@ -454,6 +453,8 @@ class Field(IssueHistory):
                     for d in tqdm(list(wjson["issues"])):
                         # print("Matching, Issue key " + d["key"] + " to URL...")  # uncomment if you want to trail
                         webURL = ("https://" + baseurl + "/rest/api/3/issue/" + d["key"] + "/changelog")
+                        b.save_checkpoint(field_name=field_name,
+                                          method=(None, "post_field_data"), startAt=startAt)
                         data = requests.get(webURL, auth=auth_request, headers=headers)
                         fjson = json.loads(data.content)
                         if data.status_code != 200:
@@ -465,8 +466,6 @@ class Field(IssueHistory):
                                     if fetch is not None:
                                         for j in fetch:
                                             if j["field"] == field_name:
-                                                b.save_checkpoint(field_name=field_name,
-                                                                  method=(None, "post_field_data"), startAt=startAt)
                                                 self.rebuild_issue_custom_field_values((j["field"], j["fieldId"],
                                                                                         j["fromString"], j["toString"],
                                                                                         j["to"]),
