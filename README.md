@@ -15,7 +15,7 @@ The below script is written in python and helps to rebuild deleted context optio
 * If you already know the options and have added it as a default value in the custom field context, the field is able to skip rebuilding the options and simply post back the correct value
 
 # Read Me
-Make sure Python is installed! Goto https://www.python.org/downloads/ any version from v3.x will do. You will also need to ensure you have PIP on your computer with the download. check by using 
+Make sure Python is installed! Goto https://www.python.org/downloads/ any version from v3.6.x will do. You will also need to ensure you have PIP on your computer with the download. check by using 
 ```python
 pip --version
 ```
