@@ -104,7 +104,7 @@ class SavePoint:
     # delete the check_point if the iterations are completed.
     def delete_checkpoint(self):
         os.remove(self.save_path)
-        os.removedirs(self.path)
+        os.rmdir(self.path)
 
 
 # we need to find all the Issues where the custom_field existed before
