@@ -666,7 +666,7 @@ def jira_basic_auth():
     token = args.__dict__["token"]
     baseurl = args.__dict__["baseurl"]
     pkey = args.__dict__["pkey"]
-    field_name = args.__dict__["field"]
+    # field_name = args.__dict__["field"] not required in this instance
 
     if args.email is None:
         email = input("Enter your Email Address: \n")
@@ -765,9 +765,9 @@ def context_check():
 
 # function for cascading select list
 def post_cassi(j=None):
-    m = str(j[3])
-    f = str(j[3])
-    h = str(j[3])
+    m = str(j[3])  
+    f = str(j[3])  # similar to m variable above -> id(m)
+    h = str(j[3])  # separated to show clarity.
     if m.__len__() > 0:
         k = f.split(")", maxsplit=5)
         d = h.split(")", maxsplit=5)
